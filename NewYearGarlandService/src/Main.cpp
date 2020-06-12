@@ -8,6 +8,15 @@
 #define PRINT_ERROR(functionName) std::wcout << L"Failed "\
     << (functionName) << L": " << GetLastError() << L'\n'
 
+HANDLE hLogFile = INVALID_HANDLE_VALUE;
+
+void log(HANDLE hLogFile, std::string message)
+{
+    DWORD nobw;
+    WriteFile(hLogFile, message.c_str(), message.size(), &nobw, NULL);
+    FlushFileBuffers(hLogFile);
+}
+
 SERVICE_STATUS_HANDLE g_HServiceStatus = 0;
 HANDLE g_HServiceStopEvent = NULL;
 SERVICE_STATUS g_ServiceStatus = {};
@@ -18,35 +27,35 @@ void reportServiceStatus(DWORD dwCurrentState, DWORD dwWaitHint)
 
     // Fill in the SERVICE_STATUS structure.
 
-    SERVICE_STATUS serviceStatus = {};
-
-    serviceStatus.dwCurrentState = dwCurrentState;
-    serviceStatus.dwWin32ExitCode = NO_ERROR;
-    serviceStatus.dwWaitHint = dwWaitHint;
+    g_ServiceStatus.dwCurrentState = dwCurrentState;
+    g_ServiceStatus.dwWin32ExitCode = NO_ERROR;
+    g_ServiceStatus.dwWaitHint = dwWaitHint;
 
     if (dwCurrentState == SERVICE_START_PENDING)
-        serviceStatus.dwControlsAccepted = 0;
-    else serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+        g_ServiceStatus.dwControlsAccepted = 0;
+    else g_ServiceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
 
     if ((dwCurrentState == SERVICE_RUNNING) ||
         (dwCurrentState == SERVICE_STOPPED))
-        serviceStatus.dwCheckPoint = 0;
-    else serviceStatus.dwCheckPoint = dwCheckPoint++;
+        g_ServiceStatus.dwCheckPoint = 0;
+    else g_ServiceStatus.dwCheckPoint = dwCheckPoint++;
 
     // Report the status of the service to the SCM.
-    SetServiceStatus(g_HServiceStatus, &serviceStatus);
+    auto ret = SetServiceStatus(g_HServiceStatus, &g_ServiceStatus);
+
+    log(hLogFile, "In reportServiceStatus SetServiceStatus result: " + std::to_string(ret) + '\n');
 }
 
 void serviceInit(DWORD dwArgc, LPTSTR* lpszArgv)
 {
+    log(hLogFile, "serviceInit start...\n");
+
     g_HServiceStopEvent = CreateEvent(
         NULL,       // sec attrs: default
         TRUE,       // is manually reset
         FALSE,      // is signaled
         NULL        // name: anonymous
     );
-
-
 
     if (g_HServiceStopEvent == NULL)
     {
@@ -100,21 +109,31 @@ void WINAPI serviceControlHandler(DWORD dwCtrl)
     }
 }
 
-void WINAPI serviceMain(DWORD dwArgc, LPTSTR* lpszArgv)
+void WINAPI serviceMain(DWORD dwArgc, LPWSTR* lpszArgv)
 {
+    log(hLogFile, "ServiceMain start...");
     g_HServiceStatus = RegisterServiceCtrlHandler(
         SERVICE_NAME, serviceControlHandler);
 
+    log(hLogFile, "After RegisterServiceCtrlHandler\n");
+
     if (g_HServiceStatus == 0)
     {
+        using namespace std::string_literals;
         //reportServiceStatus(SERVICE_STOPPED, 0);
+        log(hLogFile, "Error RegisterServiceCtrlHandler: "s + std::to_string(GetLastError()) + '\n');
         return;
     }
 
     g_ServiceStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
     g_ServiceStatus.dwServiceSpecificExitCode = 0;
+
+    log(hLogFile, "Before reportServiceStatus\n");
     
     reportServiceStatus(SERVICE_START_PENDING, 3000);
+
+    log(hLogFile, "After reportServiceStatus\n");
+    log(hLogFile, "Before serviceInit\n");
 
     serviceInit(dwArgc, lpszArgv);
 }
@@ -123,13 +142,15 @@ void serviceInstall()
 {
     SC_HANDLE schSCManager;
     SC_HANDLE schService;
-    TCHAR szPath[MAX_PATH];
+    wchar_t szPath[MAX_PATH];
 
     if (!GetModuleFileName(NULL, szPath, MAX_PATH))
     {
         PRINT_ERROR(L"GetModuleFileName");
         return;
     }
+
+    std::wcout << L"Path to executable service file: " << szPath << L'\n';
 
     schSCManager = OpenSCManager(
         NULL,                   // local computer
@@ -264,7 +285,7 @@ void waitForStatusChange(SC_HANDLE schService, SERVICE_STATUS_PROCESS& ssStatus,
         {
             if (GetTickCount() - dwStartTickCount > ssStatus.dwWaitHint)
             {
-                throw UnclassifiedException(L"Timeout waiting for service to stop");
+                throw UnclassifiedException(L"Timeout waiting for service to change status!");
             }
         }
     }
@@ -428,6 +449,31 @@ int wmain(int argc, wchar_t* argv[])
         return 0;
     }
 
+    // Initializing log file
+
+    wchar_t szPath[MAX_PATH];
+
+    if (!GetModuleFileName(NULL, szPath, MAX_PATH))
+    {
+        reportServiceStatus(SERVICE_STOPPED, 0);
+        return -1;
+    }
+
+    PathRemoveFileSpec(szPath);
+    wchar_t szLogFilePath[MAX_PATH];
+    PathCombine(szLogFilePath, szPath, L"logs.txt");
+
+    hLogFile = CreateFile(
+        szLogFilePath,
+        GENERIC_WRITE,
+        FILE_SHARE_READ,
+        NULL,
+        CREATE_NEW,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+
     wchar_t serviceName[] = SERVICE_NAME;
 
     SERVICE_TABLE_ENTRY DispatchTable[] =
@@ -436,11 +482,17 @@ int wmain(int argc, wchar_t* argv[])
         { NULL, NULL }
     };
 
+    log(hLogFile, "Before StartServiceCtrlDispatcher\n");
+
     if (StartServiceCtrlDispatcher(DispatchTable) == 0)
     {
-        std::wcout << L"Failed StartServiceCtrlDispatcher: " << GetLastError() << L'\n';
+        using namespace std::string_literals;
+        log(hLogFile, "Error StartServiceCtrlDispatcher: "s + std::to_string(GetLastError()) + '\n');
+        reportServiceStatus(SERVICE_STOPPED, 0);
         return -1;
     }
+
+    log(hLogFile, "After StartServiceCtrlDispatcher\n");
 
     return 0;
 }
