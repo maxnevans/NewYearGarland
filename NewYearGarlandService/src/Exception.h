@@ -4,12 +4,20 @@
 class Exception 
 {
 public:
-    Exception(std::wstring msg = L"")
+    Exception() {}
+
+    Exception(const std::wstring& msg)
     {
         m_Message = msg;
     }
 
-    virtual const std::wstring& what() const noexcept
+    virtual std::wstring what() const noexcept
+    {
+        return m_Message;
+    }
+
+protected:
+    const std::wstring& getMessage() const
     {
         return m_Message;
     }

@@ -1,0 +1,30 @@
+#pragma once
+#include "pch.h"
+
+#include "system/Event.h"
+#include "Logger.h"
+
+class GarlandService
+{
+public:
+    static void start();
+    static void reportFail();
+
+protected:
+    static void CALLBACK serviceMain(DWORD dwArgc, LPWSTR* lpszArgv);
+    static void CALLBACK serviceControlHandler(DWORD dwCtrl);
+    static void reportStatus(DWORD dwCurrentState, DWORD dwWaitHint);
+    static void serviceInit(DWORD dwArgc, LPWSTR* lpszArgv);
+    static std::wstring getLogsPath();
+    
+public:
+    static constexpr const wchar_t* const SERVICE_NAME = L"NewYearGarland";
+    static constexpr const wchar_t* const SERVICE_DISPLAY_NAME = L"New Year Garland";
+
+private:
+    static SERVICE_STATUS_HANDLE m_ServiceStatusHandle;
+    static SERVICE_STATUS m_ServiceStatus;
+    static DWORD m_CheckPoint;
+    static std::optional<Event> m_StopEvent;
+    static Logger m_Logger;
+};
