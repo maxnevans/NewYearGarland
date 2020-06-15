@@ -136,7 +136,8 @@ void GarlandService::serviceInit(DWORD dwArgc, LPWSTR* lpszArgv)
     m_Logger.info(L"Service successfully initialized.");
 
     m_Logger.info(L"Starting user main function.");
-    GarlandApp::main(*m_StopEvent);
+    auto app = GarlandApp(m_Logger);
+    app.main(*m_StopEvent);
     m_Logger.info(L"User function returned.");
 
     m_Logger.info(L"Stopping service.");
