@@ -54,8 +54,10 @@ LRESULT CALLBACK wndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
-int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
-    LPWSTR lpCmdLine, int nShowCmd)
+int WINAPI wWinMain(_In_ HINSTANCE hInstance, 
+    _In_opt_ HINSTANCE hPrevInstance, 
+    _In_ LPWSTR lpCmdLine,  
+    _In_ int nShowCmd)
 {
     /* Arguments parsing */
     std::vector<std::wstring> args;
