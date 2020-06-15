@@ -33,9 +33,107 @@ LRESULT wmPaint(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+
+enum class ClientMessageType
+{
+    CONNECT,
+    DISCONNECT,
+};
+
+struct ClientMessage
+{
+    ClientMessageType type;
+    DWORD pid;
+};
+
+enum class ServerMessageType
+{
+    CONNECT,
+    DISCONNECT,
+    LIGHT
+};
+
+struct ServerMessageConnect
+{
+    struct {
+        unsigned char r;
+        unsigned char g;
+        unsigned char b;
+    } color;
+};
+
+struct ServerMessageLight
+{
+    bool isPowered;
+};
+
+struct ServerMessageDisconnect
+{
+    // TODO: fill message with server reason for disconnect
+};
+
+struct ServerMessage {
+    ServerMessageType type;
+    union {
+        ServerMessageConnect connect;
+        ServerMessageLight light;
+        ServerMessageDisconnect disconnect;
+    };
+};
+
+void wmCreate()
+{
+    HANDLE hPipe = CreateFile(
+        L"\\\\.\\pipe\\NewYearGarlandService",
+        GENERIC_READ | GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (hPipe == INVALID_HANDLE_VALUE)
+    {
+        MessageBox(NULL, L"Failed to create pipe connection!", L"Warning!", MB_OK | MB_ICONWARNING);
+        return;
+    }
+
+    ClientMessage msg;
+    msg.type = ClientMessageType::CONNECT;
+    msg.pid = GetProcessId(GetModuleHandle(NULL));
+
+    DWORD numberOfBytesWritten;
+    if (WriteFile(hPipe, &msg, sizeof(msg), &numberOfBytesWritten, NULL) == FALSE || numberOfBytesWritten != sizeof(msg))
+    {
+        MessageBox(NULL, L"Failed to write to pipe!", L"Warning!", MB_OK | MB_ICONWARNING);
+        return;
+    }
+
+    ServerMessage answer;
+    DWORD numberOfBytesRead;
+    if (ReadFile(hPipe, &answer, sizeof(answer), &numberOfBytesRead, NULL) == FALSE || numberOfBytesRead != sizeof(answer))
+    {
+        MessageBox(NULL, L"Failed to read from pipe!", L"Warning!", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    std::wstringstream ss;
+
+    ss << L"Color: {";
+    ss << answer.connect.color.r << L", ";
+    ss << answer.connect.color.g << L", ";
+    ss << answer.connect.color.b << L"}";
+
+    MessageBox(NULL, ss.str().c_str(), L"Info", MB_OK | MB_ICONINFORMATION);
+    
+}
+
 LRESULT CALLBACK wndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg) {
+        case WM_CREATE:
+            wmCreate();
+            return 0;
         case WM_PAINT:
             return wmPaint(hWnd, uMsg, wParam, lParam);
         case WM_ERASEBKGND:

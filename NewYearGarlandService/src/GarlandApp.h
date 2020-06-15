@@ -11,5 +11,5 @@ public:
     void main(Event& stopEvent);
 
 private:
-    Logger& const m_Logger;
+    Logger& m_Logger;
 };
