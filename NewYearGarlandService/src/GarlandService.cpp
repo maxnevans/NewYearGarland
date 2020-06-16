@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "GarlandService.h"
-#include "system/Win32Exception.h"
 #include "GarlandApp.h"
 
 SERVICE_STATUS_HANDLE GarlandService::m_ServiceStatusHandle = NULL;

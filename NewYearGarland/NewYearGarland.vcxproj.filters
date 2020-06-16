@@ -26,9 +26,6 @@
     <ClInclude Include="src\pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Exception.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\UnclassifiedException.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -1,8 +1,6 @@
 #pragma once
 #include "pch.h"
 
-#include "system/Event.h"
-
 class Logger
 {
 public:

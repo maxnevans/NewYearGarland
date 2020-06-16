@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Logger.h"
-#include "system/Win32Exception.h"
 
 Event Logger::m_StopEvent = Event();
 

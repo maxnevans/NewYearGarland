@@ -1,7 +1,6 @@
 #pragma once
 #include "pch.h"
 
-#include "system/Event.h"
 #include "Logger.h"
 
 class GarlandService

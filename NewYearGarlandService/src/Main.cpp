@@ -1,9 +1,6 @@
 #include "pch.h"
 
-#include "system/ServiceControlManager.h"
-#include "system/Service.h"
 #include "GarlandService.h"
-#include "system/Win32Exception.h"
 
 std::wstring getPathToCurrentExecutable()
 {

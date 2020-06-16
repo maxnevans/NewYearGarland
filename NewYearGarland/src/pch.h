@@ -8,3 +8,6 @@
 // Windows Header Files
 #include <windows.h>
 #include <gdiplus.h>
+
+// Common service and client
+#include "../../NewYearGarlandCommon/outclude/common.h"

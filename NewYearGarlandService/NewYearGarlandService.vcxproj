@@ -100,7 +100,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectName)\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectName)\src\</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -119,7 +119,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectName)\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectName)\src\</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -138,7 +138,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectName)\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectName)\src\</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -157,7 +157,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectName)\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectName)\src\</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -173,9 +173,6 @@
     <ClCompile Include="src\GarlandApp.cpp" />
     <ClCompile Include="src\GarlandService.cpp" />
     <ClCompile Include="src\Logger.cpp" />
-    <ClCompile Include="src\system\Event.cpp" />
-    <ClCompile Include="src\system\ServiceControlManager.cpp" />
-    <ClCompile Include="src\system\Service.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -192,12 +189,12 @@
     <ClInclude Include="src\GarlandApp.h" />
     <ClInclude Include="src\GarlandService.h" />
     <ClInclude Include="src\Logger.h" />
-    <ClInclude Include="src\system\Event.h" />
-    <ClInclude Include="src\system\ServiceControlManager.h" />
-    <ClInclude Include="src\system\Service.h" />
-    <ClInclude Include="src\Exception.h" />
     <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\system\Win32Exception.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NewYearGarlandCommon\NewYearGarlandCommon.vcxproj">
+      <Project>{42f10ed6-10b1-4db2-b299-494aaada92c7}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
