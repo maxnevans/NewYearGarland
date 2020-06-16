@@ -1,6 +1,2 @@
-﻿  Main.cpp
-  Event.cpp
-  Service.cpp
-  ServiceControlManager.cpp
-  Generating Code...
+﻿  NamedPipe.cpp
   NewYearGarlandCommon.vcxproj -> D:\Source\softarex\NewYearGarland\bin\NewYearGarlandCommon_d.lib

@@ -35,49 +35,31 @@ LRESULT wmPaint(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void wmCreate()
 {
-    HANDLE hPipe = CreateFile(
-        L"\\\\.\\pipe\\NewYearGarlandService",
-        GENERIC_READ | GENERIC_WRITE,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL
-    );
-
-    if (hPipe == INVALID_HANDLE_VALUE)
+    try
     {
-        MessageBox(NULL, L"Failed to create pipe connection!", L"Warning!", MB_OK | MB_ICONWARNING);
-        return;
+        auto pipe = NamedPipe::connect(L"NewYearGarlandService");
+
+        ClientMessage msg;
+        msg.type = ClientMessageType::CONNECT;
+        msg.pid = GetProcessId(GetModuleHandle(NULL));
+
+        pipe.write(msg);
+
+        ServerMessage answer = pipe.read<ServerMessage>();
+
+        std::wstringstream ss;
+
+        ss << L"Color: {";
+        ss << answer.connect.color.r << L", ";
+        ss << answer.connect.color.g << L", ";
+        ss << answer.connect.color.b << L"}";
+
+        MessageBox(NULL, ss.str().c_str(), L"Info", MB_OK | MB_ICONINFORMATION);
     }
-
-    ClientMessage msg;
-    msg.type = ClientMessageType::CONNECT;
-    msg.pid = GetProcessId(GetModuleHandle(NULL));
-
-    DWORD numberOfBytesWritten;
-    if (WriteFile(hPipe, &msg, sizeof(msg), &numberOfBytesWritten, NULL) == FALSE || numberOfBytesWritten != sizeof(msg))
+    catch (Win32Exception& ex)
     {
-        MessageBox(NULL, L"Failed to write to pipe!", L"Warning!", MB_OK | MB_ICONWARNING);
-        return;
+        MessageBox(NULL, ex.what().c_str(), L"Win32Exception Error", MB_OK |MB_ICONWARNING);
     }
-
-    ServerMessage answer;
-    DWORD numberOfBytesRead;
-    if (ReadFile(hPipe, &answer, sizeof(answer), &numberOfBytesRead, NULL) == FALSE || numberOfBytesRead != sizeof(answer))
-    {
-        MessageBox(NULL, L"Failed to read from pipe!", L"Warning!", MB_OK | MB_ICONWARNING);
-        return;
-    }
-    std::wstringstream ss;
-
-    ss << L"Color: {";
-    ss << answer.connect.color.r << L", ";
-    ss << answer.connect.color.g << L", ";
-    ss << answer.connect.color.b << L"}";
-
-    MessageBox(NULL, ss.str().c_str(), L"Info", MB_OK | MB_ICONINFORMATION);
-    
 }
 
 LRESULT CALLBACK wndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

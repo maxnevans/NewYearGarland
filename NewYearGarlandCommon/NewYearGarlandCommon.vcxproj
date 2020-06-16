@@ -171,6 +171,7 @@
     <ClInclude Include="src\Message.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\system\Event.h" />
+    <ClInclude Include="src\system\NamedPipe.h" />
     <ClInclude Include="src\system\Service.h" />
     <ClInclude Include="src\system\ServiceControlManager.h" />
     <ClInclude Include="src\system\Win32Exception.h" />
@@ -188,6 +189,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="src\system\Event.cpp" />
+    <ClCompile Include="src\system\NamedPipe.cpp" />
     <ClCompile Include="src\system\Service.cpp" />
     <ClCompile Include="src\system\ServiceControlManager.cpp" />
   </ItemGroup>

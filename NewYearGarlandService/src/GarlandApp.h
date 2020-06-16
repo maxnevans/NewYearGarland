@@ -11,5 +11,6 @@ public:
     void main(Event& stopEvent);
 
 private:
+    static constexpr const wchar_t* PIPE_NAME = L"NewYearGarlandService";
     Logger& m_Logger;
 };
