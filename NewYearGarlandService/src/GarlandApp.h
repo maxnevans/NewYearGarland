@@ -7,44 +7,29 @@ class GarlandApp
 {
 public:
     using ReportStoppingFunc = void (*)(DWORD);
-    struct ClientProcArguments
-    {
-        ClientProcArguments(const std::wstring& pipeName, Logger& logger)
-            :
-            pipe(pipeName),
-            logger(logger)
-        {}
-        NamedPipe pipe;
-        Logger& logger;
-    };
 
     struct Client;
     using ClientThread = Thread<Client*>;
 
     struct Client
     {
-        Client(ClientThread::ThreadProc proc, const std::wstring& pipeName, Logger& logger)
+        Client(ClientThread::ThreadProc proc, const std::wstring& pipeName, 
+            Logger& logger, size_t index, std::stack<size_t>& unusedClientsQueue, Mutex& unusedClientsStackMutex)
             :
-            args(pipeName, logger),
-            thread(proc, this)
+            pipe(pipeName),
+            logger(logger),
+            thread(proc, this),
+            index(index),
+            unusedClientsStack(unusedClientsQueue),
+            unusedClientsStackMutex(unusedClientsStackMutex)
         {
         }
         ClientThread thread;
-        ClientProcArguments args;
-    };
-
-    struct ServerProcArguments
-    {
-        ServerProcArguments(Logger& logger,
-            std::vector<std::shared_ptr<Client>>& clients)
-            :
-            logger(logger),
-            clients(clients)
-        {
-        }
+        NamedPipe pipe;
         Logger& logger;
-        std::vector<std::shared_ptr<Client>>& clients;
-        Mutex clientsMutex;
+        size_t index;
+        Mutex& unusedClientsStackMutex;
+        std::stack<size_t>& unusedClientsStack;
     };
     
     struct Server;
@@ -53,16 +38,22 @@ public:
     struct Server
     {
         Server(ServerThread::ThreadProc proc, Logger& logger, 
-            std::vector<std::shared_ptr<Client>>& clients)
+            std::vector<std::shared_ptr<Client>>& clients, std::stack<size_t>& unusedClientsStack)
             :
-            args(logger, clients),
-            thread(proc, this)
+            logger(logger), 
+            clients(clients),
+            thread(proc, this),
+            unusedClientsStack(unusedClientsStack)
         {
         }
 
         ServerThread thread;
         Mutex mutex;
-        ServerProcArguments args;
+        Logger& logger;
+        Mutex clientsMutex;
+        std::vector<std::shared_ptr<Client>>& clients;
+        Mutex unusedClientsStackMutex;
+        std::stack<size_t>& unusedClientsStack;
     };
     
 public:
@@ -80,4 +71,5 @@ private:
     Logger& m_Logger;
     std::vector<std::shared_ptr<Client>> m_Clients;
     std::vector<std::shared_ptr<Server>> m_Servers;
+    std::stack<size_t> m_UnusedClientsStack;
 };

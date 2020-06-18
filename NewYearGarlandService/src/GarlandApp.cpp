@@ -39,8 +39,10 @@ void GarlandApp::main(Event& stopEvent, ReportStoppingFunc reportStopping)
 void GarlandApp::clientThreadProc(Event& stopEvent, Client* client)
 {
     auto& thread = client->thread;
-    auto& pipe = client->args.pipe;
-    auto& logger = client->args.logger;
+    auto& pipe = client->pipe;
+    auto& logger = client->logger;
+    auto& unusedClientsQueue = client->unusedClientsStack;
+    auto& unusedClientsStackMutex = client->unusedClientsStackMutex;
 
     logger.info(THREAD_MSG(thread, L"Client thread started."));
 
@@ -56,27 +58,50 @@ void GarlandApp::clientThreadProc(Event& stopEvent, Client* client)
     pipe.write(answer);
     logger.info(THREAD_MSG(thread, L"Message sent."));
     logger.info(THREAD_MSG(thread, L"Connection closed."));
+
+    {
+        MutexGuard m(unusedClientsStackMutex);
+        unusedClientsQueue.push(client->index);
+    }
+
+    logger.info(THREAD_MSG(thread, L"Thread added to unusedClientsQueue."));
 }
 
 void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
 {
-    auto& logger = server->args.logger;
-    auto& clients = server->args.clients;
-    auto& clientsMutex = server->args.clientsMutex;
+    auto& logger = server->logger;
+    auto& clients = server->clients;
+    auto& clientsMutex = server->clientsMutex;
     auto& thread = server->thread;
 
     logger.info(THREAD_MSG(thread, L"Server started."));
 
     while (!stopEvent.check())
     {
-        auto client = std::make_shared<Client>(clientThreadProc, PIPE_NAME, logger);
+        auto client = std::make_shared<Client>(clientThreadProc, PIPE_NAME, 
+            logger, 0, server->unusedClientsStack, server->unusedClientsStackMutex);
 
         logger.info(THREAD_MSG(thread, L"Listenining for client to connect..."));
-        client->args.pipe.listen();
+        client->pipe.listen();
         logger.info(THREAD_MSG(thread, L"Client connected."));
 
+        if (!server->unusedClientsStack.empty())
         {
+            logger.info(THREAD_MSG(thread, L"Client takes unused index in clients vector."));
+            MutexGuard m(server->unusedClientsStackMutex);
+            if (!server->unusedClientsStack.empty())
+            {
+                MutexGuard m(clientsMutex);
+                client->index = server->unusedClientsStack.top();
+                clients[client->index] = client;
+            }
+            server->unusedClientsStack.pop();
+        }
+        else
+        {
+            logger.info(THREAD_MSG(thread, L"Client takes new index in clients vector."));
             MutexGuard m(clientsMutex);
+            client->index = clients.size();
             clients.push_back(client);
         }
 
@@ -88,7 +113,7 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
 
 void GarlandApp::createServer(Event& stopEvent)
 {
-    auto& server = m_Servers.emplace_back(new Server(serverThreadProc, m_Logger, m_Clients));
+    auto& server = m_Servers.emplace_back(new Server(serverThreadProc, m_Logger, m_Clients, m_UnusedClientsStack));
     server->thread.start();
 }
 

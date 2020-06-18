@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <execution>
 #include <iterator>
+#include <stack>
+#include <queue>
 
 // For a better meaning
 #define expect(x) assert(x)
