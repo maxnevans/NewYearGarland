@@ -5,12 +5,82 @@
 #define WIDTH 1280
 #define HEIGHT 720
 
+#define WM_GARLAND (WM_USER + 0x01)
+
+struct
+{
+    using byte = unsigned char;
+    struct
+    {
+        byte r;
+        byte g;
+        byte b;
+    } color;
+
+    bool isPowered = false;
+    Mutex accessMutex;
+} garland;
+
+DWORD uiThreadId = NULL;
+
+void garlandThreadProc(Event& eventStop, void*)
+{
+    while (true)
+    {
+        auto pipe = NamedPipe::connect(L"NewYearGarlandService");
+
+        ClientMessage msg;
+        msg.type = ClientMessageType::CONNECT;
+        msg.pid = GetProcessId(GetModuleHandle(NULL));
+
+        pipe.write(msg);
+
+        ServerMessage connectMsg = pipe.read<ServerMessage>();
+
+        {
+            auto& color = connectMsg.connect.color;
+            MutexGuard m(garland.accessMutex);
+            garland.color = { color.r, color.g, color.b };
+        }
+
+        ServerMessage lightOnMsg = pipe.read<ServerMessage>();
+
+        {
+            MutexGuard m(garland.accessMutex);
+            garland.isPowered = true;
+        }
+
+        PostThreadMessage(uiThreadId, WM_GARLAND, NULL, NULL);
+
+        ServerMessage lightOffMsg = pipe.read<ServerMessage>();
+
+        {
+            MutexGuard m(garland.accessMutex);
+            garland.isPowered = false;
+        }
+
+        PostThreadMessage(uiThreadId, WM_GARLAND, NULL, NULL);
+    }
+}
+
+Thread<void*> thread(garlandThreadProc, nullptr);
+
 void draw(Gdiplus::Graphics& gfx)
 {
-    Gdiplus::Color bulbColor(96, 191, 183);
+    Gdiplus::Color bulbColor = {};
+    bool isPowered = false;
+    {
+        MutexGuard m(garland.accessMutex);
+        isPowered = garland.isPowered;
+        bulbColor = { garland.color.r, garland.color.g, garland.color.b };
+    }
+
     gfx.FillRectangle(&Gdiplus::SolidBrush(Gdiplus::Color(180, 180, 180)), Gdiplus::Rect(0, 0, WIDTH, HEIGHT));
 
-    gfx.FillEllipse(&Gdiplus::SolidBrush(bulbColor), Gdiplus::Rect(50, 50, WIDTH - 50, HEIGHT - 50));
+    if (isPowered)
+        gfx.FillEllipse(&Gdiplus::SolidBrush(bulbColor), Gdiplus::Rect(50, 50, WIDTH - 50, HEIGHT - 50));
+
+    gfx.DrawEllipse(&Gdiplus::Pen(Gdiplus::Color::Black, 2), Gdiplus::Rect(50, 50, WIDTH - 50, HEIGHT - 50));
 }
 
 LRESULT wmPaint(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -35,31 +105,12 @@ LRESULT wmPaint(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void wmCreate()
 {
-    try
-    {
-        auto pipe = NamedPipe::connect(L"NewYearGarlandService");
-
-        ClientMessage msg;
-        msg.type = ClientMessageType::CONNECT;
-        msg.pid = GetProcessId(GetModuleHandle(NULL));
-
-        pipe.write(msg);
-
-        ServerMessage answer = pipe.read<ServerMessage>();
-
-        std::wstringstream ss;
-
-        ss << L"Color: {";
-        ss << answer.connect.color.r << L", ";
-        ss << answer.connect.color.g << L", ";
-        ss << answer.connect.color.b << L"}";
-
-        MessageBox(NULL, ss.str().c_str(), L"Info", MB_OK | MB_ICONINFORMATION);
-    }
-    catch (Win32Exception& ex)
-    {
-        MessageBox(NULL, ex.what().c_str(), L"Win32Exception Error", MB_OK |MB_ICONWARNING);
-    }
+    uiThreadId = GetCurrentThreadId();
+    thread.onException([](const Exception& ex) {
+        MessageBox(NULL, ex.what().c_str(), L"Win32Exception Error", MB_OK | MB_ICONWARNING);
+    });
+    
+    thread.start();
 }
 
 LRESULT CALLBACK wndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -81,6 +132,10 @@ LRESULT CALLBACK wndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             PostQuitMessage(0);
             return 0;
+        }
+        case WM_GARLAND:
+        {
+            InvalidateRect(hWnd, NULL, FALSE);
         }
     }
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
