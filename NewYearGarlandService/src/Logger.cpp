@@ -164,12 +164,18 @@ void Logger::writeMessage(const std::wstring& message)
     expect(m_LogFileHandle != NULL);
 
     try
-    {
-        std::string normalString = std::string(message.begin(), message.end());
+    {        
+        auto requiredSize = WideCharToMultiByte(CP_UTF8, NULL, message.c_str(), message.size(), NULL, 0, NULL, NULL);
+        if (requiredSize == NULL)
+            throw Win32Exception(L"WideCharToMultiByte");
+
+        std::string convertedStr(requiredSize, 0);
+        if (WideCharToMultiByte(CP_UTF8, NULL, message.c_str(), message.size(), convertedStr.data(), convertedStr.size(), NULL, NULL) == NULL)
+            throw Win32Exception(L"WideCharToMultiByte");
 
         CriticalSectionGuard cs(m_Cs);
         DWORD written;
-        if (!WriteFile(m_LogFileHandle, normalString.c_str(), normalString.size(), &written, NULL) || written != normalString.size())
+        if (!WriteFile(m_LogFileHandle, convertedStr.c_str(), convertedStr.size(), &written, NULL) || written != convertedStr.size())
             throw Win32Exception(L"WriteFile");
     }
     catch (...)
@@ -244,6 +250,8 @@ DWORD WINAPI Logger::flusherThreadProc(LPVOID params)
         if (m_StopEvent.wait(FLUSH_INTERVAL))
             break;
     }
+
+    return 0;
 }
 
 void Logger::startFlusher()

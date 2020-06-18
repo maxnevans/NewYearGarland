@@ -18,6 +18,8 @@
 #include <iterator>
 #include <stack>
 #include <queue>
+#include <locale>
+#include <codecvt>
 
 // For a better meaning
 #define expect(x) assert(x)
