@@ -43,21 +43,64 @@ void GarlandApp::clientThreadProc(Event& stopEvent, Client* client)
     auto& logger = client->logger;
     auto& unusedClientsQueue = client->unusedClientsStack;
     auto& unusedClientsStackMutex = client->unusedClientsStackMutex;
+    auto& garland = client->garland;
 
     logger.info(THREAD_MSG(thread, L"Client thread started."));
 
-    logger.info(THREAD_MSG(thread, L"Waiting for client to send message."));
-    ClientMessage msg = pipe.read<ClientMessage>();
-    logger.info(THREAD_MSG(thread, L"Message retrieved."));
+    DWORD pid = NULL;
 
-    ServerMessage answer;
-    answer.type = ServerMessageType::CONNECT;
-    answer.connect.color = { 10, 20, 30 };
+    {
+        logger.info(THREAD_MSG(thread, L"Waiting for client to send message."));
+        ClientMessage msg = pipe.read<ClientMessage>();
+        logger.info(THREAD_MSG(thread, L"Message retrieved."));
+        pid = msg.pid;
+    }
 
-    logger.info(THREAD_MSG(thread, L"Sending message to client."));
-    pipe.write(answer);
-    logger.info(THREAD_MSG(thread, L"Message sent."));
-    logger.info(THREAD_MSG(thread, L"Connection closed."));
+    {
+        ServerMessage msg;
+        msg.type = ServerMessageType::CONNECT;
+        const auto color = garland.getColor(pid);
+        msg.connect.color = { color.r, color.g, color.b };
+
+        logger.info(THREAD_MSG(thread, L"Sending message to client."));
+        pipe.write(msg);
+        logger.info(THREAD_MSG(thread, L"Message sent."));
+    }
+
+    garland.start(pid);
+
+    {
+        ServerMessage msg;
+        msg.type = ServerMessageType::LIGHT;
+        msg.light.isPowered = true;
+
+        logger.info(THREAD_MSG(thread, L"Sending message to client."));
+        pipe.write(msg);
+        logger.info(THREAD_MSG(thread, L"Message sent."));
+    }
+
+    garland.wait();
+
+    {
+        ServerMessage msg;
+        msg.type = ServerMessageType::LIGHT;
+        msg.light.isPowered = false;
+
+        logger.info(THREAD_MSG(thread, L"Sending message to client."));
+        pipe.write(msg);
+        logger.info(THREAD_MSG(thread, L"Message sent."));
+    }
+
+    garland.stop();
+
+    {
+        ServerMessage msg;
+        msg.type = ServerMessageType::DISCONNECT;
+
+        logger.info(THREAD_MSG(thread, L"Sending message to client."));
+        pipe.write(msg);
+        logger.info(THREAD_MSG(thread, L"Message sent."));
+    }
 
     {
         MutexGuard m(unusedClientsStackMutex);
@@ -65,6 +108,7 @@ void GarlandApp::clientThreadProc(Event& stopEvent, Client* client)
     }
 
     logger.info(THREAD_MSG(thread, L"Thread added to unusedClientsQueue."));
+    logger.info(THREAD_MSG(thread, L"Connection closed."));
 }
 
 void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
@@ -79,7 +123,7 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
     while (!stopEvent.check())
     {
         auto client = std::make_shared<Client>(clientThreadProc, PIPE_NAME, 
-            logger, 0, server->unusedClientsStack, server->unusedClientsStackMutex);
+            logger, 0, server->unusedClientsStack, server->unusedClientsStackMutex, server->garland);
 
         logger.info(THREAD_MSG(thread, L"Listenining for client to connect..."));
         client->pipe.listen();
@@ -113,7 +157,7 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
 
 void GarlandApp::createServer(Event& stopEvent)
 {
-    auto& server = m_Servers.emplace_back(new Server(serverThreadProc, m_Logger, m_Clients, m_UnusedClientsStack));
+    auto& server = m_Servers.emplace_back(new Server(serverThreadProc, m_Logger, m_Clients, m_UnusedClientsStack, m_Garland));
     server->thread.start();
 }
 

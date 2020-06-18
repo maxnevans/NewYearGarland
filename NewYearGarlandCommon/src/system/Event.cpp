@@ -43,7 +43,7 @@ bool Event::check()
     return false;
 }
 
-bool Event::wait(int milliseconds)
+bool Event::wait(DWORD milliseconds)
 {
     switch (WaitForSingleObject(m_Handle, milliseconds))
     {

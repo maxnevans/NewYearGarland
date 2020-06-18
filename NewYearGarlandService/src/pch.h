@@ -20,6 +20,8 @@
 #include <queue>
 #include <locale>
 #include <codecvt>
+#include <random>
+#include <limits>
 
 // For a better meaning
 #define expect(x) assert(x)

@@ -14,6 +14,6 @@ public:
     Event& operator=(const Event&) = delete;
     void reset();
     bool check();
-    bool wait(int milliseconds = INFINITE);
+    bool wait(DWORD milliseconds = INFINITE);
     void emmit();
 };
