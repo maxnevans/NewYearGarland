@@ -59,6 +59,10 @@ public:
     {
         m_ExceptionCallback = cb;
     }
+    DWORD getId() const
+    {
+        return m_ThreadId;
+    }
 
 protected:
     static DWORD WINAPI threadProc(LPVOID arg)

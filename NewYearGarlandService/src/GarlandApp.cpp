@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "GarlandApp.h"
 
+#define THREAD_MSG(thread, msg) L"Thread ID (" + std::to_wstring(thread.getId()) + L") " + msg
+
 GarlandApp::GarlandApp(Logger& logger)
     :
     m_Logger(logger)
@@ -34,43 +36,44 @@ void GarlandApp::main(Event& stopEvent, ReportStoppingFunc reportStopping)
     }
 }
 
-void GarlandApp::clientThreadProc(Event& stopEvent, ClientProcArguments* args)
+void GarlandApp::clientThreadProc(Event& stopEvent, Client* client)
 {
+    auto& thread = client->thread;
+    auto& pipe = client->args.pipe;
+    auto& logger = client->args.logger;
 
-    auto& pipe = args->pipe;
-    auto& logger = args->logger;
+    logger.info(THREAD_MSG(thread, L"Client thread started."));
 
-    logger.info(L"Client thread started.");
-
-    logger.info(L"Waiting for client to send message.");
+    logger.info(THREAD_MSG(thread, L"Waiting for client to send message."));
     ClientMessage msg = pipe.read<ClientMessage>();
-    logger.info(L"Message retrieved.");
+    logger.info(THREAD_MSG(thread, L"Message retrieved."));
 
     ServerMessage answer;
     answer.type = ServerMessageType::CONNECT;
     answer.connect.color = { 10, 20, 30 };
 
-    logger.info(L"Sending message to client.");
+    logger.info(THREAD_MSG(thread, L"Sending message to client."));
     pipe.write(answer);
-    logger.info(L"Message sent.");
-    logger.info(L"Connection closed.");
+    logger.info(THREAD_MSG(thread, L"Message sent."));
+    logger.info(THREAD_MSG(thread, L"Connection closed."));
 }
 
-void GarlandApp::serverThreadProc(Event& stopEvent, ServerProcArguments* args)
+void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
 {
-    auto& logger = args->logger;
-    auto& clients = args->clients;
-    auto& clientsMutex = args->clientsMutex;
+    auto& logger = server->args.logger;
+    auto& clients = server->args.clients;
+    auto& clientsMutex = server->args.clientsMutex;
+    auto& thread = server->thread;
 
-    logger.info(L"Server started.");
+    logger.info(THREAD_MSG(thread, L"Server started."));
 
     while (!stopEvent.check())
     {
         auto client = std::make_shared<Client>(clientThreadProc, PIPE_NAME, logger);
 
-        logger.info(L"Listenining for client to connect...");
+        logger.info(THREAD_MSG(thread, L"Listenining for client to connect..."));
         client->args.pipe.listen();
-        logger.info(L"Client connected.");
+        logger.info(THREAD_MSG(thread, L"Client connected."));
 
         {
             MutexGuard m(clientsMutex);
@@ -80,7 +83,7 @@ void GarlandApp::serverThreadProc(Event& stopEvent, ServerProcArguments* args)
         client->thread.start();
     }
 
-    logger.info(L"Server stopped.");
+    logger.info(THREAD_MSG(thread, L"Server stopped."));
 }
 
 void GarlandApp::createServer(Event& stopEvent)

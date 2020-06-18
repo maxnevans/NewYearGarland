@@ -18,14 +18,15 @@ public:
         Logger& logger;
     };
 
-    using ClientThread = Thread<ClientProcArguments*>;
+    struct Client;
+    using ClientThread = Thread<Client*>;
 
     struct Client
     {
         Client(ClientThread::ThreadProc proc, const std::wstring& pipeName, Logger& logger)
             :
             args(pipeName, logger),
-            thread(proc, &args)
+            thread(proc, this)
         {
         }
         ClientThread thread;
@@ -46,7 +47,8 @@ public:
         Mutex clientsMutex;
     };
     
-    using ServerThread = Thread<ServerProcArguments*>;
+    struct Server;
+    using ServerThread = Thread<Server*>;
 
     struct Server
     {
@@ -54,7 +56,7 @@ public:
             std::vector<std::shared_ptr<Client>>& clients)
             :
             args(logger, clients),
-            thread(proc, &args)
+            thread(proc, this)
         {
         }
 
@@ -68,8 +70,8 @@ public:
     GarlandApp(const GarlandApp&) = delete;
     GarlandApp& operator=(const GarlandApp&) = delete;
     void main(Event& stopEvent, ReportStoppingFunc reportStopping);
-    static void clientThreadProc(Event& stopEvent, ClientProcArguments* args);
-    static void serverThreadProc(Event& stopEvent, ServerProcArguments* args);
+    static void clientThreadProc(Event& stopEvent, Client* args);
+    static void serverThreadProc(Event& stopEvent, Server* args);
     void createServer(Event& stopEvent);
     bool stopServers(DWORD waitMilliseconds = 3000);
 
