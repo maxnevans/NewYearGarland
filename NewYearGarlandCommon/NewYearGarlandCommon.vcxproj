@@ -73,24 +73,24 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
-    <IntDir>$(SolutionDir)$(ProjectName)\</IntDir>
+    <IntDir>$(SolutionDir)obj\$(ProjectName)\</IntDir>
     <TargetName>$(ProjectName)_d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
-    <IntDir>$(SolutionDir)$(ProjectName)\</IntDir>
+    <IntDir>$(SolutionDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
-    <IntDir>$(SolutionDir)$(ProjectName)\</IntDir>
+    <IntDir>$(SolutionDir)obj\$(ProjectName)\</IntDir>
     <TargetName>$(ProjectName)_x64_d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
-    <IntDir>$(SolutionDir)$(ProjectName)\</IntDir>
+    <IntDir>$(SolutionDir)obj\$(ProjectName)\</IntDir>
     <TargetName>$(ProjectName)_x64</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -170,10 +170,17 @@
     <ClInclude Include="src\Exception.h" />
     <ClInclude Include="src\Message.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\system\CriticalSection.h" />
+    <ClInclude Include="src\system\CriticalSectionGuard.h" />
     <ClInclude Include="src\system\Event.h" />
+    <ClInclude Include="src\system\Mutex.h" />
+    <ClInclude Include="src\system\MutexGuard.h" />
     <ClInclude Include="src\system\NamedPipe.h" />
     <ClInclude Include="src\system\Service.h" />
     <ClInclude Include="src\system\ServiceControlManager.h" />
+    <ClInclude Include="src\system\StdSupport.h" />
+    <ClInclude Include="src\system\SystemObject.h" />
+    <ClInclude Include="src\system\Thread.h" />
     <ClInclude Include="src\system\Win32Exception.h" />
   </ItemGroup>
   <ItemGroup>
@@ -188,10 +195,15 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pch.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="src\system\CriticalSection.cpp" />
+    <ClCompile Include="src\system\CriticalSectionGuard.cpp" />
     <ClCompile Include="src\system\Event.cpp" />
+    <ClCompile Include="src\system\Mutex.cpp" />
+    <ClCompile Include="src\system\MutexGuard.cpp" />
     <ClCompile Include="src\system\NamedPipe.cpp" />
     <ClCompile Include="src\system\Service.cpp" />
     <ClCompile Include="src\system\ServiceControlManager.cpp" />
+    <ClCompile Include="src\system\SystemObject.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

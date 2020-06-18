@@ -11,8 +11,13 @@ Logger::Logger(const std::wstring& pathToLogs, bool shouldThrow)
 
 Logger::~Logger()
 {
+    expect(m_FlusherThread);
+
     if (m_FlusherThread != NULL)
+    {
+        TerminateThread(m_FlusherThread, NULL);
         CloseHandle(m_FlusherThread);
+    }
 
     if (m_LogFileHandle != NULL)
         CloseHandle(m_LogFileHandle);
@@ -162,6 +167,7 @@ void Logger::writeMessage(const std::wstring& message)
     {
         std::string normalString = std::string(message.begin(), message.end());
 
+        CriticalSectionGuard cs(m_Cs);
         DWORD written;
         if (!WriteFile(m_LogFileHandle, normalString.c_str(), normalString.size(), &written, NULL) || written != normalString.size())
             throw Win32Exception(L"WriteFile");
@@ -228,8 +234,12 @@ DWORD WINAPI Logger::flusherThreadProc(LPVOID params)
 
     while (true)
     {
-        if (!FlushFileBuffers(logger->m_LogFileHandle))
-            throw Win32Exception(L"FlushFileBuffers");
+        {
+            CriticalSectionGuard cs(logger->m_Cs);
+
+            if (!FlushFileBuffers(logger->m_LogFileHandle))
+                throw Win32Exception(L"FlushFileBuffers");
+        }
 
         if (m_StopEvent.wait(FLUSH_INTERVAL))
             break;

@@ -9,7 +9,7 @@ public:
     virtual ~NamedPipe();
     NamedPipe(const NamedPipe&) = delete;
     NamedPipe& operator=(const NamedPipe&) = delete;
-    void listen(int waitMilliseconds = 1000);
+    void listen();
     static NamedPipe connect(const std::wstring& name);
 
     template<typename T>

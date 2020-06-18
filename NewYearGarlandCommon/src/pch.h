@@ -9,6 +9,8 @@
 #include <optional>
 #include <cassert>
 #include <memory>
+#include <functional>
+#include <utility>
 
 // For a better meaning
 #define expect(x) assert(x)

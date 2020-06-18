@@ -136,7 +136,7 @@ void GarlandService::serviceInit(DWORD dwArgc, LPWSTR* lpszArgv)
 
     m_Logger.info(L"Starting user main function.");
     auto app = GarlandApp(m_Logger);
-    app.main(*m_StopEvent);
+    app.main(*m_StopEvent, reportStopping);
     m_Logger.info(L"User function returned.");
 
     m_Logger.info(L"Stopping service.");
@@ -155,4 +155,9 @@ std::wstring GarlandService::getLogsPath()
     PathAppend(szPath, L"logs");
 
     return szPath;
+}
+
+void GarlandService::reportStopping(DWORD waitHint)
+{
+    reportStatus(SERVICE_STOP_PENDING, waitHint);
 }

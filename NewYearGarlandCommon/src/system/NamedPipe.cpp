@@ -26,7 +26,7 @@ NamedPipe::~NamedPipe()
         CloseHandle(m_Handle);
 }
 
-void NamedPipe::listen(int waitMilliseconds)
+void NamedPipe::listen()
 {
     expect(m_Handle != NULL);
 
@@ -37,6 +37,15 @@ void NamedPipe::listen(int waitMilliseconds)
 NamedPipe NamedPipe::connect(const std::wstring& name)
 {
     std::wstring fullName = L"\\\\.\\pipe\\" + name;
+
+    const int checksNumber = 5;
+
+    for (int i = 0; i < checksNumber; i++)
+        if (WaitNamedPipe(fullName.c_str(), NMPWAIT_USE_DEFAULT_WAIT))
+            break;
+        else if (i == checksNumber - 1)
+            throw Win32Exception(L"WaitNamedPipe", L"connect timeout, failed to connect to pipe");
+    
     HANDLE hPipe = CreateFile(
         fullName.c_str(),
         GENERIC_READ | GENERIC_WRITE,

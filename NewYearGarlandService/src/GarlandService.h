@@ -15,6 +15,7 @@ protected:
     static void reportStatus(DWORD dwCurrentState, DWORD dwWaitHint);
     static void serviceInit(DWORD dwArgc, LPWSTR* lpszArgv);
     static std::wstring getLogsPath();
+    static void reportStopping(DWORD waitHint);
     
 public:
     static constexpr const wchar_t* const SERVICE_NAME = L"NewYearGarland";

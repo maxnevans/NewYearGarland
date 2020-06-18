@@ -45,4 +45,5 @@ private:
     bool m_ShouldThrow = false;
     bool m_IsFailed = false;
     bool m_StartFailed = false;
+    CriticalSection m_Cs = {};
 };

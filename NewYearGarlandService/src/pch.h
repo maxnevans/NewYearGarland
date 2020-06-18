@@ -9,7 +9,13 @@
 #include <optional>
 #include <cassert>
 #include <memory>
-
+#include <map>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
+#include <algorithm>
+#include <execution>
+#include <iterator>
 
 // For a better meaning
 #define expect(x) assert(x)
