@@ -1,8 +1,11 @@
 #pragma once
 
-#include "../pch.h"
+#include "pch.h"
+#include "SystemObject.h"
 
 class Event
+    :
+    public SystemObject
 {
 public:
     Event(bool isManuallyReset = true, bool isSignaled = false, const wchar_t* name = nullptr);
@@ -13,7 +16,4 @@ public:
     bool check();
     bool wait(int milliseconds = INFINITE);
     void emmit();
-    
-private:
-    HANDLE m_Handle = NULL;
 };

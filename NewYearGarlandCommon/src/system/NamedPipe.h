@@ -1,8 +1,11 @@
 #pragma once
 #include "pch.h"
 #include "Win32Exception.h"
+#include "SystemObject.h"
 
 class NamedPipe
+    :
+    public SystemObject
 {
 public:
     NamedPipe(const std::wstring& name);
@@ -44,6 +47,5 @@ protected:
 private:
     static constexpr const DWORD INPUT_BUFFER_SIZE      = 4096;
     static constexpr const DWORD OUTPUT_BUFFER_SIZE     = 4096;
-    HANDLE m_Handle                                     = NULL;
 
 };
