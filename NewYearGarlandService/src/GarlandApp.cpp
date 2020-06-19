@@ -149,6 +149,10 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
             clients.push_back(client);
         }
 
+        client->thread.onException([&client](const Exception& ex) {
+            client->logger.error(THREAD_MSG(client->thread, L"Client thread exception happend." + ex.what()));
+        });
+
         client->thread.start();
     }
 
@@ -158,6 +162,9 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
 void GarlandApp::createServer(Event& stopEvent)
 {
     auto& server = m_Servers.emplace_back(new Server(serverThreadProc, m_Logger, m_Clients, m_UnusedClientsStack, m_Garland));
+    server->thread.onException([this, &server](const Exception& ex) {
+        m_Logger.error(THREAD_MSG(server->thread, L"Server thread exception happend." + ex.what()));
+    });
     server->thread.start();
 }
 
@@ -165,6 +172,7 @@ bool GarlandApp::stopServers(DWORD waitMilliseconds)
 {
     std::for_each(std::execution::par_unseq, m_Servers.begin(), m_Servers.end(), [](const std::shared_ptr<Server>& server) {
         CancelSynchronousIo(server->thread.getHandle());
+        server->thread.stop();
     });
 
     auto serverThreadHandlers = std::vector<HANDLE>{};
