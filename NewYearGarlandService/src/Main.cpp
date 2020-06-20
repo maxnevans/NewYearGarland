@@ -81,18 +81,14 @@ int wmain(int argc, wchar_t* argv[])
 
             std::wcout << L"Starting service from console...\n";
 
-            wchar_t szPath[MAX_PATH];
-            if (!GetModuleFileName(NULL, szPath, MAX_PATH))
-            {
-                lstrcpy(szPath, L"C:\\logs");
-            }
-            PathRemoveFileSpec(szPath);
-            PathAppend(szPath, L"logs");
+            HANDLE hStd = GetStdHandle(STD_OUTPUT_HANDLE);
+            if (hStd == INVALID_HANDLE_VALUE)
+                throw Win32Exception(L"GetStdHandle");
 
-
-            Logger logger(szPath, true);
+            Logger logger(hStd, true);
             logger.start();
             std::wcout << L"Logger successfully initialized.\n";
+
             GarlandApp app(logger);
             std::wcout << L"Application successfully initialized.\n";
 

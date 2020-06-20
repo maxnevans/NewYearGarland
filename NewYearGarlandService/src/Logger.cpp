@@ -3,15 +3,26 @@
 
 Event Logger::m_StopEvent = Event();
 
-Logger::Logger(const std::wstring& pathToLogs, bool shouldThrow)
+Logger::Logger(HANDLE handle, bool shouldThrow, bool enableFlusher)
+    :
+    m_LogFileHandle(handle),
+    m_ShouldThrow(shouldThrow),
+    m_ShouldCloseFile(false),
+    m_EnableFlusher(enableFlusher)
 {
-    m_ShouldThrow = shouldThrow;
-    m_LogDir = pathToLogs;
+}
+
+Logger::Logger(const std::wstring& pathToLogs, bool shouldThrow, bool enableFlusher)
+    :
+    m_ShouldThrow(shouldThrow),
+    m_LogDir(pathToLogs),
+    m_EnableFlusher(enableFlusher)
+{
 }
 
 Logger::~Logger()
 {
-    expect(m_FlusherThread);
+    expect(m_FlusherThread != NULL);
 
     if (m_FlusherThread != NULL)
     {
@@ -19,7 +30,7 @@ Logger::~Logger()
         CloseHandle(m_FlusherThread);
     }
 
-    if (m_LogFileHandle != NULL)
+    if (m_ShouldCloseFile && m_LogFileHandle != NULL)
         CloseHandle(m_LogFileHandle);
 }
 
@@ -27,48 +38,11 @@ void Logger::start()
 {
     try
     {
-        if (!directoryExists(m_LogDir))
-            makeDirectory(m_LogDir);
+        if (m_LogFileHandle == NULL)
+            createLogFile();
 
-        auto logFilePath = joinPath(m_LogDir, createLogFileName());
-
-        m_LogFileHandle = CreateFile(
-            logFilePath.c_str(),
-            GENERIC_WRITE,
-            FILE_SHARE_READ,
-            NULL,
-            CREATE_NEW,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL
-        );
-
-        if (m_LogFileHandle == INVALID_HANDLE_VALUE)
-        {
-            auto errCode = GetLastError();
-
-            if (errCode != ERROR_FILE_EXISTS)
-                throw Win32Exception(L"CreateFile", L"failed to create non existing file", errCode);
-
-            // Trying to open existing file
-
-            m_LogFileHandle = CreateFile(
-                logFilePath.c_str(),
-                GENERIC_WRITE,
-                FILE_SHARE_READ,
-                NULL,
-                OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL,
-                NULL
-            );
-
-            if (m_LogFileHandle == INVALID_HANDLE_VALUE)
-                throw Win32Exception(L"CreateFile", L"failed to open existing file");
-        }
-
-        if (SetFilePointer(m_LogFileHandle, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER)
-            throw Win32Exception(L"SetFilePointer");
-
-        startFlusher();
+        if (m_EnableFlusher)
+            startFlusher();
             
     }
     catch (...)
@@ -83,27 +57,31 @@ void Logger::start()
 
 void Logger::stop(int maxWait)
 {
-    if (m_FlusherThread == NULL)
-        return;
-
-    try
+    if (m_EnableFlusher)
     {
-        m_StopEvent.emmit();
-        switch (WaitForSingleObject(m_FlusherThread, maxWait))
+        expect(m_FlusherThread != NULL);
+
+        if (m_FlusherThread == NULL)
+            return;
+
+        try
         {
-        case WAIT_TIMEOUT:
-        case WAIT_FAILED:
-            throw Win32Exception(L"Logger::stop", L"WaitForSingleObject on event failed");
+            m_StopEvent.emmit();
+            switch (WaitForSingleObject(m_FlusherThread, maxWait))
+            {
+            case WAIT_TIMEOUT:
+            case WAIT_FAILED:
+                throw Win32Exception(L"Logger::stop", L"WaitForSingleObject on event failed");
+            }
+        }
+        catch (...)
+        {
+            if (m_ShouldThrow)
+                throw;
+            else
+                m_IsFailed = true;
         }
     }
-    catch (...)
-    {
-        if (m_ShouldThrow)
-            throw;
-        else
-            m_IsFailed = true;
-    }
-    
 }
 
 bool Logger::isFailed() const
@@ -260,4 +238,48 @@ void Logger::startFlusher()
 
     if (m_FlusherThread == NULL)
         throw Win32Exception(L"CreateThread");
+}
+
+void Logger::createLogFile()
+{
+    if (!directoryExists(m_LogDir))
+        makeDirectory(m_LogDir);
+
+    auto logFilePath = joinPath(m_LogDir, createLogFileName());
+
+    m_LogFileHandle = CreateFile(
+        logFilePath.c_str(),
+        GENERIC_WRITE,
+        FILE_SHARE_READ,
+        NULL,
+        CREATE_NEW,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (m_LogFileHandle == INVALID_HANDLE_VALUE)
+    {
+        auto errCode = GetLastError();
+
+        if (errCode != ERROR_FILE_EXISTS)
+            throw Win32Exception(L"CreateFile", L"failed to create non existing file", errCode);
+
+        // Trying to open existing file
+
+        m_LogFileHandle = CreateFile(
+            logFilePath.c_str(),
+            GENERIC_WRITE,
+            FILE_SHARE_READ,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+        );
+
+        if (m_LogFileHandle == INVALID_HANDLE_VALUE)
+            throw Win32Exception(L"CreateFile", L"failed to open existing file");
+    }
+
+    if (SetFilePointer(m_LogFileHandle, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER)
+        throw Win32Exception(L"SetFilePointer");
 }

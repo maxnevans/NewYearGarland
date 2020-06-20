@@ -4,7 +4,8 @@
 class Logger
 {
 public:
-    Logger(const std::wstring& pathToLogs, bool shouldThrow = false);
+    Logger(HANDLE handle, bool shouldThrow = false, bool enableFlusher = false);
+    Logger(const std::wstring& pathToLogs, bool shouldThrow = false, bool enableFlusher = true);
     virtual ~Logger();
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
@@ -28,6 +29,7 @@ protected:
     std::wstring joinPath(const std::wstring& dir, const std::wstring& filename) const;
     static DWORD WINAPI flusherThreadProc(_In_ LPVOID params);
     void startFlusher();
+    void createLogFile();
 
 public:
     static constexpr const wchar_t* const MARK_ERROR = L"ERROR";
@@ -46,4 +48,6 @@ private:
     bool m_IsFailed = false;
     bool m_StartFailed = false;
     CriticalSection m_Cs = {};
+    bool m_ShouldCloseFile = true;
+    bool m_EnableFlusher = true;
 };
