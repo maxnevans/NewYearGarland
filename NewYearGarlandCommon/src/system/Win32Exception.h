@@ -10,37 +10,28 @@ class Win32Exception
 public:
     Win32Exception(const std::wstring& functionName)
         :
-        Exception()
+        Win32Exception(functionName, L"", GetLastError())
     {
-        m_FunctionName = functionName;
-        m_ErrorCode = GetLastError();
     }
 
     Win32Exception(const std::wstring& functionName, DWORD code)
         :
-        Exception()
+        Win32Exception(functionName, L"", code)
     {
-        m_FunctionName = functionName;
-        m_ErrorCode = code;
     }
 
     Win32Exception(const std::wstring& functionName, const std::wstring& message)
         :
-        Exception(message)
+        Win32Exception(functionName, message, GetLastError())
     {
-        m_FunctionName = functionName;
-        m_ErrorCode = GetLastError();
     }
 
     Win32Exception(const std::wstring& functionName, const std::wstring& message, DWORD code)
         :
-        Exception(message)
+        Exception(message),
+        m_FunctionName(functionName),
+        m_ErrorCode(code)
     {
-        m_FunctionName = functionName;
-        m_ErrorCode = code;
-    }
-
-    virtual std::wstring what() const noexcept {
         std::wstringstream ss;
         ss << L"Error in " << m_FunctionName << L" ";
         ss << L"[System Code: " << m_ErrorCode << "]";
@@ -49,9 +40,9 @@ public:
             ss << ": " << getMessage();
 
         if (!ss)
-            return L"Fatal error: failed to generate exception message!";
-       
-        return ss.str().c_str();
+            setMessage(L"Fatal error: failed to generate exception message!");
+        else
+            setMessage(ss.str().c_str());        
     }
 
     DWORD getCode() const

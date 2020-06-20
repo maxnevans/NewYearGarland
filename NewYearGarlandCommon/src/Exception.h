@@ -1,7 +1,7 @@
 #pragma once
 #include "pch.h"
 
-class Exception 
+class Exception
 {
 public:
     Exception() {}
@@ -20,6 +20,11 @@ protected:
     const std::wstring& getMessage() const
     {
         return m_Message;
+    }
+
+    void setMessage(const std::wstring& msg)
+    {
+        m_Message = msg;
     }
 
 private:

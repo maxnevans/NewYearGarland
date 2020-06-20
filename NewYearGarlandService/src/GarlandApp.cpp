@@ -5,7 +5,8 @@
 
 GarlandApp::GarlandApp(Logger& logger)
     :
-    m_Logger(logger)
+    m_Logger(logger),
+    m_Garland(logger)
 {
 }
 
@@ -18,15 +19,19 @@ void GarlandApp::main(Event& stopEvent, ReportStoppingFunc reportStopping)
 
         m_Logger.info(L"Starting stop wait loop.");
 
-        while (!stopEvent.wait(1000));
+        m_Logger.info(L"Staring garland.");
 
-        m_Logger.info(L"Stopping servers.");
+        m_Garland.start(stopEvent);
 
         const DWORD stoppingTimout = 3000;
-
         reportStopping(stoppingTimout);
+
+        m_Logger.info(L"Stopping servers.");
         if (!stopServers(stoppingTimout))
             m_Logger.warn(L"Failed to stop servers in " + std::to_wstring(stoppingTimout));
+
+        m_Logger.info(L"Stopping garland.");
+        m_Garland.stop();
 
         m_Logger.info(L"Servers successfully stopped.");
     }
@@ -47,67 +52,59 @@ void GarlandApp::clientThreadProc(Event& stopEvent, Client* client)
 
     logger.info(THREAD_MSG(thread, L"Client thread started."));
 
-    DWORD pid = NULL;
-
+    auto onLightOn = [&logger, &pipe, &garland, &thread]()
     {
-        logger.info(THREAD_MSG(thread, L"Waiting for client to send message."));
-        ClientMessage msg = pipe.read<ClientMessage>();
-        logger.info(THREAD_MSG(thread, L"Message retrieved."));
-        pid = msg.pid;
-    }
+        {
+            ServerMessage msg;
+            msg.type = ServerMessageType::LIGHT;
+            msg.light.isPowered = true;
 
-    {
-        ServerMessage msg;
-        msg.type = ServerMessageType::CONNECT;
-        const auto color = garland.getColor(pid);
-        msg.connect.color = { color.r, color.g, color.b };
+            logger.info(THREAD_MSG(thread, L"Sending `onLightOn` message to client."));
+            pipe.write(msg);
+            logger.info(THREAD_MSG(thread, L"Message sent."));
+        }
+        
+    };
 
-        logger.info(THREAD_MSG(thread, L"Sending message to client."));
-        pipe.write(msg);
-        logger.info(THREAD_MSG(thread, L"Message sent."));
-    }
-
-    garland.start(pid);
-
-    {
-        ServerMessage msg;
-        msg.type = ServerMessageType::LIGHT;
-        msg.light.isPowered = true;
-
-        logger.info(THREAD_MSG(thread, L"Sending message to client."));
-        pipe.write(msg);
-        logger.info(THREAD_MSG(thread, L"Message sent."));
-    }
-
-    garland.wait();
-
+    auto onLightOff = [&logger, &pipe, &thread]()
     {
         ServerMessage msg;
         msg.type = ServerMessageType::LIGHT;
         msg.light.isPowered = false;
 
-        logger.info(THREAD_MSG(thread, L"Sending message to client."));
+        logger.info(THREAD_MSG(thread, L"Sending `onLightOff` message to client."));
         pipe.write(msg);
         logger.info(THREAD_MSG(thread, L"Message sent."));
-    }
+    };
 
-    garland.stop();
-
+    auto onColor = [&logger, &pipe, &garland, &thread](const Garland::Color& color)
     {
         ServerMessage msg;
-        msg.type = ServerMessageType::DISCONNECT;
+        msg.type = ServerMessageType::COLOR;
+        msg.color = { color.r, color.g, color.b };
 
-        logger.info(THREAD_MSG(thread, L"Sending message to client."));
+        logger.info(THREAD_MSG(thread, L"Sending `onColor` message to client."));
         pipe.write(msg);
         logger.info(THREAD_MSG(thread, L"Message sent."));
-    }
+    };
 
+    try
     {
-        MutexGuard m(unusedClientsStackMutex);
-        unusedClientsQueue.push(client->index);
+        auto id = garland.registerLightbulb(stopEvent, onColor, onLightOn, onLightOff);
+        logger.info(THREAD_MSG(thread, L"Lightbulb registered. Delegating thread to garland."));
+        garland.delegate(id);
+
+        logger.info(THREAD_MSG(thread, L"Garland stop this lighbulb."));
+    }
+    catch (const Exception& ex)
+    {
+        logger.error(THREAD_MSG(thread, L"Lighbulb: Garland says that exception happend: " + ex.what()));
+    }
+    catch (...)
+    {
+        logger.error(THREAD_MSG(thread, L"Lightbulb: Unknown exception happend when tried to register and start garland lighbulb."));
     }
 
-    logger.info(THREAD_MSG(thread, L"Thread added to unusedClientsQueue."));
     logger.info(THREAD_MSG(thread, L"Connection closed."));
 }
 
@@ -135,11 +132,20 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
             MutexGuard m(server->unusedClientsStackMutex);
             if (!server->unusedClientsStack.empty())
             {
-                MutexGuard m(clientsMutex);
-                client->index = server->unusedClientsStack.top();
-                clients[client->index] = client;
+                {
+                    MutexGuard m(clientsMutex);
+                    client->index = server->unusedClientsStack.top();
+                    clients[client->index] = client;
+                }
+                server->unusedClientsStack.pop();
             }
-            server->unusedClientsStack.pop();
+            else
+            {
+                logger.info(THREAD_MSG(thread, L"Client takes new index in clients vector."));
+                MutexGuard m(clientsMutex);
+                client->index = clients.size();
+                clients.push_back(client);
+            }
         }
         else
         {
@@ -170,29 +176,23 @@ void GarlandApp::createServer(Event& stopEvent)
 
 bool GarlandApp::stopServers(DWORD waitMilliseconds)
 {
-    std::for_each(std::execution::par_unseq, m_Servers.begin(), m_Servers.end(), [](const std::shared_ptr<Server>& server) {
-        CancelSynchronousIo(server->thread.getHandle());
-        server->thread.stop();
-    });
+    auto savePoint = GetTickCount64();
 
-    auto serverThreadHandlers = std::vector<HANDLE>{};
+    // Stopping clients
+    m_Logger.debug(L"Garland::stopServers: stopping clients.");
+    if (!p_StopEntityThreads(m_Clients, waitMilliseconds))
+        return false;
 
-    std::for_each(m_Servers.begin(), m_Servers.end(), [&serverThreadHandlers](const std::shared_ptr<Server>& server) {
-        serverThreadHandlers.emplace_back(server->thread.getHandle());
-    });
+    auto timeElapsed = GetTickCount64() - savePoint;
+    long long timeRemaining = waitMilliseconds - timeElapsed;
 
-    switch (WaitForMultipleObjects(serverThreadHandlers.size(),
-        serverThreadHandlers.data(), TRUE, waitMilliseconds))
-    {
-        case WAIT_OBJECT_0:
-            return true;
-        case WAIT_FAILED:
-            throw Win32Exception(L"WaitForMultipleObjects");
-        case WAIT_TIMEOUT:
-            return false;
-        case WAIT_ABANDONED:
-            throw Win32Exception(L"WaitForMultipleObjects");
-    }
+    if (timeRemaining <= 0)
+        return false;
 
-    throw Win32Exception(L"WaitForMultipleObjects", L"unhandled unknown return code");
+    // Stopping servers
+    m_Logger.debug(L"Garland::stopServers: stopping servers.");
+    if (!p_StopEntityThreads(m_Servers, static_cast<DWORD>(timeRemaining)))
+        return false;
+
+    return true;
 }

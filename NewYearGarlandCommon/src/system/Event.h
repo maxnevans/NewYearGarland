@@ -12,6 +12,8 @@ public:
     virtual ~Event();
     Event(const Event&) = delete;
     Event& operator=(const Event&) = delete;
+    Event(Event&& other) noexcept;
+    Event& operator=(Event&& other) noexcept;
     void reset();
     bool check();
     bool wait(DWORD milliseconds = INFINITE);

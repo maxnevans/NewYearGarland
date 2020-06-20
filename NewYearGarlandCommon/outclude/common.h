@@ -13,3 +13,5 @@
 #include "../src/system/MutexGuard.h"
 #include "../src/system/CriticalSection.h"
 #include "../src/system/CriticalSectionGuard.h"
+#include "../src/system/Monitor.h"
+#include "../src/system/Barrier.h"

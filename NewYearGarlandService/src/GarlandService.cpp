@@ -86,9 +86,9 @@ void CALLBACK GarlandService::serviceControlHandler(DWORD dwCtrl)
     switch (dwCtrl)
     {
     case SERVICE_CONTROL_STOP:
+        reportStatus(SERVICE_STOP_PENDING, 3000);
         m_Logger.info(L"Service got control stop.");
-        m_Logger.info(L"Stoping service.");
-        reportStatus(SERVICE_STOP_PENDING, 0);
+        m_Logger.info(L"Stoping service. Saying that we will stop it in 3 seconds.");
         try 
         {
             m_StopEvent->emmit();

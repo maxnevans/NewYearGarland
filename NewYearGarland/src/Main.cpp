@@ -5,7 +5,7 @@
 #define WIDTH 1280
 #define HEIGHT 720
 
-#define WM_GARLAND (WM_USER + 0x01)
+#define WM_GARLAND (WM_USER + 0x001)
 
 struct
 {
@@ -18,48 +18,44 @@ struct
     } color;
 
     bool isPowered = false;
-    Mutex accessMutex;
+    CriticalSection accessCs;
 } garland;
 
-DWORD uiThreadId = NULL;
+HWND hWnd;
 
 void garlandThreadProc(Event& eventStop, void*)
 {
+    auto pipe = NamedPipe::connect(L"NewYearGarlandService");
+
     while (true)
     {
-        auto pipe = NamedPipe::connect(L"NewYearGarlandService");
-
-        ClientMessage msg;
-        msg.type = ClientMessageType::CONNECT;
-        msg.pid = GetProcessId(GetModuleHandle(NULL));
-
-        pipe.write(msg);
-
         ServerMessage connectMsg = pipe.read<ServerMessage>();
 
         {
-            auto& color = connectMsg.connect.color;
-            MutexGuard m(garland.accessMutex);
+            auto& color = connectMsg.color;
+            CriticalSectionGuard cs(garland.accessCs);
             garland.color = { color.r, color.g, color.b };
         }
 
         ServerMessage lightOnMsg = pipe.read<ServerMessage>();
 
         {
-            MutexGuard m(garland.accessMutex);
+            CriticalSectionGuard cs(garland.accessCs);
             garland.isPowered = true;
         }
 
-        PostThreadMessage(uiThreadId, WM_GARLAND, NULL, NULL);
+        if (PostMessage(hWnd, WM_GARLAND, NULL, NULL) == FALSE)
+            throw Win32Exception(L"PostThreadMessage");
 
         ServerMessage lightOffMsg = pipe.read<ServerMessage>();
 
         {
-            MutexGuard m(garland.accessMutex);
+            CriticalSectionGuard cs(garland.accessCs);
             garland.isPowered = false;
         }
 
-        PostThreadMessage(uiThreadId, WM_GARLAND, NULL, NULL);
+        if (PostMessage(hWnd, WM_GARLAND, NULL, NULL) == FALSE)
+            throw Win32Exception(L"PostThreadMessage");
     }
 }
 
@@ -70,7 +66,7 @@ void draw(Gdiplus::Graphics& gfx)
     Gdiplus::Color bulbColor = {};
     bool isPowered = false;
     {
-        MutexGuard m(garland.accessMutex);
+        CriticalSectionGuard m(garland.accessCs);
         isPowered = garland.isPowered;
         bulbColor = { garland.color.r, garland.color.g, garland.color.b };
     }
@@ -103,11 +99,12 @@ LRESULT wmPaint(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-void wmCreate()
+void wmCreate(HWND a_hWnd)
 {
-    uiThreadId = GetCurrentThreadId();
-    thread.onException([](const Exception& ex) {
+    hWnd = a_hWnd;
+    thread.onException([&a_hWnd](const Exception& ex) {
         MessageBox(NULL, ex.what().c_str(), L"Win32Exception Error", MB_OK | MB_ICONWARNING);
+        PostMessage(a_hWnd, WM_CLOSE, 0, 0);
     });
     
     thread.start();
@@ -115,9 +112,15 @@ void wmCreate()
 
 LRESULT CALLBACK wndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    if (uMsg == WM_GARLAND)
+    {
+        InvalidateRect(hWnd, NULL, FALSE);
+        return 0;
+    }
+
     switch (uMsg) {
         case WM_CREATE:
-            wmCreate();
+            wmCreate(hWnd);
             return 0;
         case WM_PAINT:
             return wmPaint(hWnd, uMsg, wParam, lParam);
@@ -133,11 +136,8 @@ LRESULT CALLBACK wndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             PostQuitMessage(0);
             return 0;
         }
-        case WM_GARLAND:
-        {
-            InvalidateRect(hWnd, NULL, FALSE);
-        }
     }
+
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 

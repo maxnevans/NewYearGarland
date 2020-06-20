@@ -5,15 +5,20 @@
 class Monitor
 {
 public:
+    using ConditionalVariableType = int;
+public:
     Monitor();
     virtual ~Monitor();
     Monitor(const Monitor&) = delete;
     Monitor& operator=(const Monitor&) = delete;
     void enter();
     void leave();
-    int createVariable();
-    bool sleep(int variable, DWORD milliseconds = INFINITE);
-    void wake(int variable, bool wakeAll = false);
+    ConditionalVariableType createVariable();
+    bool sleep(ConditionalVariableType variable, DWORD milliseconds = INFINITE);
+    void wake(ConditionalVariableType variable, bool wakeAll = false);
+
+public:
+    static constexpr const ConditionalVariableType INVALID_CONDITIONAL_VARIABLE = -1;
 
 private:
     static constexpr const DWORD SPIN_COUNT = 4096;

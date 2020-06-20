@@ -74,6 +74,45 @@ public:
     bool stopServers(DWORD waitMilliseconds = 3000);
 
 private:
+    /**
+     * Stop entities. `TEntity` should have field `thread` of type `Thread`.
+     * 
+     * \param entities
+     * \return false if timeout otherwise true
+     * \throw Win32Exception
+     */
+    template<typename TEntity>
+    bool p_StopEntityThreads(const std::vector<std::shared_ptr<TEntity>>& entities, DWORD waitMilliseconds)
+    {
+        if (entities.size() > 0)
+        {
+            std::for_each(entities.begin(), entities.end(), [](const std::shared_ptr<TEntity>& entity) {
+                CancelSynchronousIo(entity->thread.getHandle());
+                entity->thread.stop();
+            });
+
+            auto entityThreadHandlers = std::vector<HANDLE>{};
+
+            std::for_each(entities.begin(), entities.end(), [&entityThreadHandlers](const std::shared_ptr<TEntity>& entity) {
+                entityThreadHandlers.emplace_back(entity->thread.getHandle());
+            });
+
+            switch (WaitForMultipleObjects(entityThreadHandlers.size(),
+                entityThreadHandlers.data(), TRUE, waitMilliseconds))
+            {
+            case WAIT_FAILED:
+                throw Win32Exception(L"WaitForMultipleObjects");
+            case WAIT_TIMEOUT:
+                return false;
+            case WAIT_ABANDONED:
+                throw Win32Exception(L"WaitForMultipleObjects");
+            }
+        }
+
+        return true;
+    }
+
+private:
     static constexpr const wchar_t* PIPE_NAME = L"NewYearGarlandService";
     Logger& m_Logger;
     Garland m_Garland;

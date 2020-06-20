@@ -5,7 +5,6 @@
 Monitor::Monitor()
 {
     InitializeCriticalSectionAndSpinCount(&m_CriticalSection, SPIN_COUNT);
-    InitializeConditionVariable(&m_ConditionalVariable);
 }
 
 Monitor::~Monitor()
@@ -23,17 +22,19 @@ void Monitor::leave()
     LeaveCriticalSection(&m_CriticalSection);
 }
 
-int Monitor::createVariable()
+Monitor::ConditionalVariableType Monitor::createVariable()
 {
     CONDITION_VARIABLE cs;
     InitializeConditionVariable(&cs);
-    m_ConditionalVariables.push_back(cs);
+    m_ConditionalVariables.emplace_back(std::move(cs));
     return m_ConditionalVariables.size() - 1;
 }
 
-bool Monitor::sleep(int variable, DWORD milliseconds)
+bool Monitor::sleep(ConditionalVariableType variable, DWORD milliseconds)
 {
-    auto cs = m_ConditionalVariables.at(variable);
+    expect(variable >= 0 && variable < m_ConditionalVariables.size());
+
+    auto& cs = m_ConditionalVariables[variable];
     if (SleepConditionVariableCS(&cs, &m_CriticalSection, milliseconds) == FALSE)
     {
         auto err = GetLastError();
@@ -43,13 +44,17 @@ bool Monitor::sleep(int variable, DWORD milliseconds)
         else
             throw Win32Exception(L"SleepConditionVariableCS", err);
     }
+
+    return true;
 }
 
-void Monitor::wake(int variable, bool wakeAll)
+void Monitor::wake(ConditionalVariableType variable, bool wakeAll)
 {
-    auto cs = m_ConditionalVariables.at(variable);
+    expect(variable >= 0 && variable < m_ConditionalVariables.size());
+
+    auto& cs = m_ConditionalVariables[variable];
     if (wakeAll)
         WakeAllConditionVariable(&cs);
     else
-        WakeConditionVariable(&cs)
+        WakeConditionVariable(&cs);
 }

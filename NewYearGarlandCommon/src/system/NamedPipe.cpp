@@ -2,13 +2,13 @@
 #include "NamedPipe.h"
 #include "Win32Exception.h"
 
-NamedPipe::NamedPipe(const std::wstring& name)
+NamedPipe::NamedPipe(const std::wstring& name, DWORD mode)
 {
     std::wstring fullName = L"\\\\.\\pipe\\" + name;
 
     m_Handle = CreateNamedPipe(
         fullName.c_str(),
-        PIPE_ACCESS_DUPLEX,
+        mode,
         PIPE_TYPE_BYTE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
         INPUT_BUFFER_SIZE, OUTPUT_BUFFER_SIZE, 0, NULL
@@ -29,6 +29,7 @@ NamedPipe::~NamedPipe()
 void NamedPipe::listen()
 {
     expect(m_Handle != NULL);
+    expect(m_ErrorCode == ERROR_SUCCESS);
 
     if (ConnectNamedPipe(m_Handle, NULL) == 0)
         throw Win32Exception(L"ConnectNamedPipe");

@@ -170,9 +170,11 @@
     <ClInclude Include="src\Exception.h" />
     <ClInclude Include="src\Message.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\system\Barrier.h" />
     <ClInclude Include="src\system\CriticalSection.h" />
     <ClInclude Include="src\system\CriticalSectionGuard.h" />
     <ClInclude Include="src\system\Event.h" />
+    <ClInclude Include="src\system\Monitor.h" />
     <ClInclude Include="src\system\Mutex.h" />
     <ClInclude Include="src\system\MutexGuard.h" />
     <ClInclude Include="src\system\NamedPipe.h" />
@@ -195,9 +197,11 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pch.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="src\system\Barrier.cpp" />
     <ClCompile Include="src\system\CriticalSection.cpp" />
     <ClCompile Include="src\system\CriticalSectionGuard.cpp" />
     <ClCompile Include="src\system\Event.cpp" />
+    <ClCompile Include="src\system\Monitor.cpp" />
     <ClCompile Include="src\system\Mutex.cpp" />
     <ClCompile Include="src\system\MutexGuard.cpp" />
     <ClCompile Include="src\system\NamedPipe.cpp" />

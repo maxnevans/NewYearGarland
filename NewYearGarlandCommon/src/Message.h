@@ -1,31 +1,16 @@
 #include "pch.h"
 
-enum class ClientMessageType
-{
-    CONNECT,
-    DISCONNECT,
-};
-
-struct ClientMessage
-{
-    ClientMessageType type;
-    DWORD pid;
-};
-
 enum class ServerMessageType
 {
-    CONNECT,
-    DISCONNECT,
-    LIGHT
+    LIGHT,
+    COLOR
 };
 
-struct ServerMessageConnect
+struct ServerMessageColor
 {
-    struct {
-        unsigned char r;
-        unsigned char g;
-        unsigned char b;
-    } color;
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
 };
 
 struct ServerMessageLight
@@ -33,16 +18,10 @@ struct ServerMessageLight
     bool isPowered;
 };
 
-struct ServerMessageDisconnect
-{
-    // TODO: fill message with server reason for disconnect
-};
-
 struct ServerMessage {
     ServerMessageType type;
     union {
-        ServerMessageConnect connect;
         ServerMessageLight light;
-        ServerMessageDisconnect disconnect;
+        ServerMessageColor color;
     };
 };
