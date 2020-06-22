@@ -29,6 +29,7 @@
 // Windows Header Files
 #include <windows.h>
 #include <Shlwapi.h>
+#include <Shlobj.h>
 
 // Common files for service and client project
 #include "../../NewYearGarlandCommon/outclude/common.h"

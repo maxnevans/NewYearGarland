@@ -14,6 +14,7 @@ std::wstring getPathToCurrentExecutable()
 }
 
 Event stopEvent = {};
+bool shouldPauseConsole = false;
 
 BOOL WINAPI consoleHandler(DWORD signal) {
 
@@ -36,8 +37,20 @@ void installService()
     std::wcout << L"Installing service...\n";
     ServiceControlManager scm;
     std::wcout << L"SCM successfully opened.\n";
-    Service::install(scm, GarlandService::SERVICE_NAME,
-        GarlandService::SERVICE_DISPLAY_NAME, getPathToCurrentExecutable());
+    try
+    {
+        Service::install(scm, GarlandService::SERVICE_NAME,
+            GarlandService::SERVICE_DISPLAY_NAME, getPathToCurrentExecutable());
+    }
+    catch (const Win32Exception& ex)
+    {
+        if (ex.getCode() == ERROR_SERVICE_EXISTS)
+        {
+            std::wcout << L"Service already installed.\n";
+            return;
+        }
+        throw;
+    }
     std::wcout << L"Service successfully installed!\n";
 }
 
@@ -123,16 +136,24 @@ int wmain(int argc, wchar_t* argv[])
 
         if (!GarlandService::start(logger))
         {
+            shouldPauseConsole = true;
+
             // If started from console install and start service
-            installService();
-            //startService(argc, argv);
-            std::wcout << L"You can now close console safely.\n";
-            system("pause");
+            if (!IsUserAnAdmin())
+            {
+                std::wcout << L"Please run this app as administrator!\n";
+            } 
+            else
+            {
+                installService();
+                startService(argc, argv);
+                std::wcout << L"You can now close console safely.\n";
+            }
         }
 
         logger.stop();
     }
-    catch (Win32Exception& ex)
+    catch (const Win32Exception& ex)
     {
         std::wcout << ex.what() << L"\n";
     }
@@ -140,6 +161,9 @@ int wmain(int argc, wchar_t* argv[])
     {
         std::wcout << L"Failed to execute operation! Unknown exception happend!\n";
     }
+
+    if (shouldPauseConsole)
+        system("pause");
 
     return 0;
 }
