@@ -56,13 +56,25 @@ void installService()
 
 void deleteService()
 {
-    std::wcout << L"Deleting service...\n";
-    ServiceControlManager scm;
-    std::wcout << L"SCM successfully opened.\n";
-    Service service(scm, GarlandService::SERVICE_NAME);
-    std::wcout << L"Service found.\n";
-    service.uninstall();
-    std::wcout << L"Service successfully deleted!\n";
+    try
+    {
+        std::wcout << L"Deleting service...\n";
+        ServiceControlManager scm;
+        std::wcout << L"SCM successfully opened.\n";
+        Service service(scm, GarlandService::SERVICE_NAME);
+        std::wcout << L"Service found.\n";
+        service.uninstall();
+        std::wcout << L"Service successfully deleted!\n";
+    }
+    catch (const Win32Exception& ex)
+    {
+        if (ex.getCode() == ERROR_SERVICE_DOES_NOT_EXIST)
+        {
+            std::wcout << L"Service already deleted.\n";
+            return;
+        }
+        throw;
+    }
 }
 
 void startService(int argc, wchar_t* argv[])
