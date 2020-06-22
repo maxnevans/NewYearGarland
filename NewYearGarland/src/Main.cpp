@@ -2,8 +2,8 @@
 
 #include "UnclassifiedException.h"
 
-#define WIDTH 1280
-#define HEIGHT 720
+#define WIDTH 400
+#define HEIGHT 300
 
 #define WM_GARLAND (WM_USER + 0x001)
 
@@ -25,38 +25,51 @@ HWND hWnd;
 
 void garlandThreadProc(Event& eventStop, void*)
 {
-    auto pipe = NamedPipe::connect(L"NewYearGarlandService", GENERIC_READ);
 
-    while (true)
+    try
     {
-        ServerMessage connectMsg = pipe.read<ServerMessage>();
+        auto pipe = NamedPipe::connect(L"NewYearGarlandService", GENERIC_READ);
 
+        while (true)
         {
-            auto& color = connectMsg.color;
-            CriticalSectionGuard cs(garland.accessCs);
-            garland.color = { color.r, color.g, color.b };
+            ServerMessage connectMsg = pipe.read<ServerMessage>();
+
+            {
+                auto& color = connectMsg.color;
+                CriticalSectionGuard cs(garland.accessCs);
+                garland.color = { color.r, color.g, color.b };
+            }
+
+            ServerMessage lightOnMsg = pipe.read<ServerMessage>();
+
+            {
+                CriticalSectionGuard cs(garland.accessCs);
+                garland.isPowered = true;
+            }
+
+            if (PostMessage(hWnd, WM_GARLAND, NULL, NULL) == FALSE)
+                throw Win32Exception(L"PostThreadMessage");
+
+            ServerMessage lightOffMsg = pipe.read<ServerMessage>();
+
+            {
+                CriticalSectionGuard cs(garland.accessCs);
+                garland.isPowered = false;
+            }
+
+            if (PostMessage(hWnd, WM_GARLAND, NULL, NULL) == FALSE)
+                throw Win32Exception(L"PostThreadMessage");
         }
-
-        ServerMessage lightOnMsg = pipe.read<ServerMessage>();
-
-        {
-            CriticalSectionGuard cs(garland.accessCs);
-            garland.isPowered = true;
-        }
-
-        if (PostMessage(hWnd, WM_GARLAND, NULL, NULL) == FALSE)
-            throw Win32Exception(L"PostThreadMessage");
-
-        ServerMessage lightOffMsg = pipe.read<ServerMessage>();
-
-        {
-            CriticalSectionGuard cs(garland.accessCs);
-            garland.isPowered = false;
-        }
-
-        if (PostMessage(hWnd, WM_GARLAND, NULL, NULL) == FALSE)
-            throw Win32Exception(L"PostThreadMessage");
     }
+    catch (const Win32Exception& ex)
+    {
+        if (ex.getCode() == ERROR_BROKEN_PIPE)
+        {
+            MessageBox(NULL, L"Service has disconnected.", L"New Year Garland: Application stopped", MB_OK | MB_ICONINFORMATION);
+            PostMessage(hWnd, WM_CLOSE, 0, 0);
+        }
+    }
+    
 }
 
 Thread<void*> thread(garlandThreadProc, nullptr);
@@ -178,7 +191,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance,
         RegisterClassEx(&wc);
 
         HWND hWnd = CreateWindow(L"MainWindow", L"New Year Garland", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-            400, 400, WIDTH, HEIGHT, NULL, NULL, hInstance, NULL);
+            100, 100, WIDTH, HEIGHT, NULL, NULL, hInstance, NULL);
 
         if (hWnd == NULL)
         {
