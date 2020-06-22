@@ -31,6 +31,63 @@ void fakeReportingStopFunction(DWORD milliseconds)
     std::wcout << L"Service reported that it will stop in " << milliseconds << L"\n";
 }
 
+void installService()
+{
+    std::wcout << L"Installing service...\n";
+    ServiceControlManager scm;
+    std::wcout << L"SCM successfully opened.\n";
+    Service::install(scm, GarlandService::SERVICE_NAME,
+        GarlandService::SERVICE_DISPLAY_NAME, getPathToCurrentExecutable());
+    std::wcout << L"Service successfully installed!\n";
+}
+
+void deleteService()
+{
+    std::wcout << L"Deleting service...\n";
+    ServiceControlManager scm;
+    std::wcout << L"SCM successfully opened.\n";
+    Service service(scm, GarlandService::SERVICE_NAME);
+    std::wcout << L"Service found.\n";
+    service.uninstall();
+    std::wcout << L"Service successfully deleted!\n";
+}
+
+void startService(int argc, wchar_t* argv[])
+{
+    std::wcout << L"Starting service...\n";
+    ServiceControlManager scm;
+    std::wcout << L"SCM successfully opened.\n";
+    Service service(scm, GarlandService::SERVICE_NAME);
+    std::wcout << L"Service found.\n";
+    service.start(argc, const_cast<const wchar_t**>(argv));
+    std::wcout << L"Service successfully started!\n";
+}
+
+void startInConsoleMode()
+{
+    if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
+        throw Win32Exception(L"SetConsoleCtrlHandler");
+
+    std::wcout << L"Starting service from console...\n";
+
+    HANDLE hStd = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hStd == INVALID_HANDLE_VALUE)
+        throw Win32Exception(L"GetStdHandle");
+
+    Logger logger(hStd, true);
+    logger.start();
+    std::wcout << L"Logger successfully initialized.\n";
+
+    GarlandApp app(logger);
+    std::wcout << L"Application successfully initialized.\n";
+
+    std::wcout << L"Starting app.main.\n";
+    app.main(stopEvent, fakeReportingStopFunction);
+    std::wcout << L"app.main stopped.\n";
+
+    logger.stop();
+    std::wcout << L"logger stopped.\n";
+}
 
 
 int wmain(int argc, wchar_t* argv[])
@@ -39,69 +96,40 @@ int wmain(int argc, wchar_t* argv[])
     {
         if (lstrcmpi(argv[1], L"install") == 0)
         {
-            std::wcout << L"Installing service...\n";
-            ServiceControlManager scm;
-            std::wcout << L"SCM successfully opened.\n";
-            Service::install(scm, GarlandService::SERVICE_NAME,
-                GarlandService::SERVICE_DISPLAY_NAME, getPathToCurrentExecutable());
-            std::wcout << L"Service successfully installed!\n";
+            installService();
             return 0;
         }
 
         if (lstrcmpi(argv[1], L"delete") == 0)
         {
-            std::wcout << L"Deleting service...\n";
-            ServiceControlManager scm;
-            std::wcout << L"SCM successfully opened.\n";
-            Service service(scm, GarlandService::SERVICE_NAME);
-            std::wcout << L"Service found.\n";
-            service.uninstall();
-            std::wcout << L"Service successfully deleted!\n";
+            deleteService();
             return 0;
         }
 
         if (lstrcmpi(argv[1], L"start") == 0)
         {
-            std::wcout << L"Starting service...\n";
-            ServiceControlManager scm;
-            std::wcout << L"SCM successfully opened.\n";
-            Service service(scm, GarlandService::SERVICE_NAME);
-            std::wcout << L"Service found.\n";
-            service.start();
-            std::wcout << L"Service successfully started!\n";
+            startService(argc, argv);
             return 0;
         }
 
         if (lstrcmpi(argv[1], L"--mode") == 0 && lstrcmpi(argv[2], L"console") == 0)
         {
-            if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
-                throw Win32Exception(L"SetConsoleCtrlHandler");
-
-            std::wcout << L"Starting service from console...\n";
-
-            HANDLE hStd = GetStdHandle(STD_OUTPUT_HANDLE);
-            if (hStd == INVALID_HANDLE_VALUE)
-                throw Win32Exception(L"GetStdHandle");
-
-            Logger logger(hStd, true);
-            logger.start();
-            std::wcout << L"Logger successfully initialized.\n";
-
-            GarlandApp app(logger);
-            std::wcout << L"Application successfully initialized.\n";
-
-            std::wcout << L"Starting app.main.\n";
-            app.main(stopEvent, fakeReportingStopFunction);
-            std::wcout << L"app.main stopped.\n";
-
-            logger.stop();
-            std::wcout << L"logger stopped.\n";
-
+            startInConsoleMode();
             return 0;
         }
 
         auto logger = Logger(GarlandService::getLogsPath(), true);
-        GarlandService::start(logger);
+        logger.start();
+
+        if (!GarlandService::start(logger))
+        {
+            // If started from console install and start service
+            installService();
+            startService(argc, argv);
+            std::wcout << L"You can now close console safely.\n";
+        }
+
+        logger.stop();
     }
     catch (Win32Exception& ex)
     {

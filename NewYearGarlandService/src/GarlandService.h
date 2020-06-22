@@ -10,7 +10,14 @@
 class GarlandService
 {
 public:
-    static void start(Logger& logger);
+    /**
+    * Start service and if success does not return until service is stopped.
+    *
+    * \param logger[in|out] logger to be used to make logs
+    * \return true if service is started from SCM, false otherwise
+    * \throw Win32Exception
+    */
+    static bool start(Logger& logger);
     static void reportFail();
     static std::wstring getLogsPath();
 

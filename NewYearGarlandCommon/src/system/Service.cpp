@@ -97,7 +97,7 @@ SC_HANDLE Service::getHandle() const
     return m_Handle;
 }
 
-void Service::start()
+void Service::start(DWORD argc, LPCWSTR* argsv)
 {
     if (isUninstalled())
         return;
@@ -113,8 +113,8 @@ void Service::start()
 
     if (!StartService(
         m_Handle,       // handle to service 
-        0,              // number of arguments 
-        NULL            // no arguments 
+        argc,           // number of arguments 
+        argsv           // arguments array
     ))
     {
         throw Win32Exception(L"StartService");

@@ -10,7 +10,7 @@ public:
     Service(const Service&) = delete;
     Service& operator=(const Service&) = delete;
     SC_HANDLE getHandle() const;
-    void start();
+    void start(DWORD argc = 0, LPCWSTR* argsv = NULL);
     bool isUninstalled();
     void uninstall();
     static Service install(const ServiceControlManager& scManager, const std::wstring& serviceName,

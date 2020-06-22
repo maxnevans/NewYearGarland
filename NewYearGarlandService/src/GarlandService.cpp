@@ -8,29 +8,29 @@ DWORD GarlandService::m_CheckPoint = 1;
 std::optional<Event> GarlandService::m_StopEvent = std::nullopt;
 Logger* GarlandService::m_Logger = nullptr;
 
-void GarlandService::start(Logger& logger)
+bool GarlandService::start(Logger& logger)
 {
+    m_Logger = &logger;
+
+    std::wstring serviceName = GarlandService::SERVICE_NAME;
+    SERVICE_TABLE_ENTRY DispatchTable[] =
+    {
+        { serviceName.data(), static_cast<LPSERVICE_MAIN_FUNCTION>(serviceMain) },
+        { NULL, NULL }
+    };
+
     try
     {
-        m_Logger = &logger;
-        m_Logger->start();
-
-        m_Logger->info(L"Service is starting...");
-
-        std::wstring serviceName = GarlandService::SERVICE_NAME;
-        SERVICE_TABLE_ENTRY DispatchTable[] =
-        {
-            { serviceName.data(), static_cast<LPSERVICE_MAIN_FUNCTION>(serviceMain) },
-            { NULL, NULL }
-        };
-
-        m_Logger->info(L"Starting service control dispatcher.");
-
         if (!StartServiceCtrlDispatcher(DispatchTable))
             throw Win32Exception(L"StartServiceCtrlDispatcher");
+
+        return true;
     }
-    catch (Win32Exception& ex)
+    catch (const Win32Exception& ex)
     {
+        if (ex.getCode() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
+            return false;
+
         reportStatus(SERVICE_STOPPED, 0);
         m_Logger->error(L"(GarlandService::start): " + ex.what());
         m_Logger->info(L"Service stopped!");
@@ -42,7 +42,7 @@ void GarlandService::start(Logger& logger)
         m_Logger->info(L"Service stopped!");
     }
 
-    m_Logger->stop();
+    return false;
 }
 
 void GarlandService::reportFail()
@@ -68,7 +68,7 @@ void CALLBACK GarlandService::serviceMain(DWORD dwArgc, LPWSTR* lpszArgv)
 
         GarlandService::serviceInit(dwArgc, lpszArgv);
     }
-    catch (Win32Exception& ex)
+    catch (const Win32Exception& ex)
     {
         m_Logger->error(L"(GarlandService::serviceMain): " + ex.what());
         m_Logger->info(L"Service stopped!");
@@ -149,9 +149,8 @@ std::wstring GarlandService::getLogsPath()
 {
     wchar_t szPath[MAX_PATH];
     if (!GetModuleFileName(NULL, szPath, MAX_PATH))
-    {
         return L"C:\\logs";
-    }
+
     PathRemoveFileSpec(szPath);
     PathAppend(szPath, L"logs");
 
