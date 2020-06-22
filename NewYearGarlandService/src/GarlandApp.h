@@ -86,27 +86,20 @@ private:
     {
         if (entities.size() > 0)
         {
+            // Create handles vector to threads
+            std::vector<HANDLE> handles;
+            std::transform(entities.begin(), entities.end(), std::back_inserter(handles),
+                [](const std::shared_ptr<TEntity>& entity) {return entity->thread.getHandle(); });
+
+            // Stopping threads
             std::for_each(entities.begin(), entities.end(), [](const std::shared_ptr<TEntity>& entity) {
                 CancelSynchronousIo(entity->thread.getHandle());
                 entity->thread.stop();
             });
 
-            auto entityThreadHandlers = std::vector<HANDLE>{};
-
-            std::for_each(entities.begin(), entities.end(), [&entityThreadHandlers](const std::shared_ptr<TEntity>& entity) {
-                entityThreadHandlers.emplace_back(entity->thread.getHandle());
-            });
-
-            switch (WaitForMultipleObjects(entityThreadHandlers.size(),
-                entityThreadHandlers.data(), TRUE, waitMilliseconds))
-            {
-            case WAIT_FAILED:
-                throw Win32Exception(L"WaitForMultipleObjects");
-            case WAIT_TIMEOUT:
-                return false;
-            case WAIT_ABANDONED:
-                throw Win32Exception(L"WaitForMultipleObjects");
-            }
+            // Waiting for all to stop
+            Waiter waiter(true, waitMilliseconds);
+            return waiter.wait(handles);
         }
 
         return true;
