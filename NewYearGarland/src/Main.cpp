@@ -25,7 +25,7 @@ HWND hWnd;
 
 void garlandThreadProc(Event& eventStop, void*)
 {
-    auto pipe = NamedPipe::connect(L"NewYearGarlandService");
+    auto pipe = NamedPipe::connect(L"NewYearGarlandService", GENERIC_READ);
 
     while (true)
     {

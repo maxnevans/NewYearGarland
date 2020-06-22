@@ -178,6 +178,8 @@
     <ClInclude Include="src\system\Mutex.h" />
     <ClInclude Include="src\system\MutexGuard.h" />
     <ClInclude Include="src\system\NamedPipe.h" />
+    <ClInclude Include="src\system\SecurityAttributes.h" />
+    <ClInclude Include="src\system\SecurityDescriptor.h" />
     <ClInclude Include="src\system\Service.h" />
     <ClInclude Include="src\system\ServiceControlManager.h" />
     <ClInclude Include="src\system\StdSupport.h" />
@@ -205,6 +207,8 @@
     <ClCompile Include="src\system\Mutex.cpp" />
     <ClCompile Include="src\system\MutexGuard.cpp" />
     <ClCompile Include="src\system\NamedPipe.cpp" />
+    <ClCompile Include="src\system\SecurityAttributes.cpp" />
+    <ClCompile Include="src\system\SecurityDescriptor.cpp" />
     <ClCompile Include="src\system\Service.cpp" />
     <ClCompile Include="src\system\ServiceControlManager.cpp" />
     <ClCompile Include="src\system\SystemObject.cpp" />

@@ -5,7 +5,7 @@
 class Monitor
 {
 public:
-    using ConditionalVariableType = int;
+    using ConditionalVariableType = unsigned int;
 public:
     Monitor();
     virtual ~Monitor();

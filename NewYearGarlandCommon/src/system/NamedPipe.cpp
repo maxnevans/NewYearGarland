@@ -2,16 +2,16 @@
 #include "NamedPipe.h"
 #include "Win32Exception.h"
 
-NamedPipe::NamedPipe(const std::wstring& name, DWORD mode)
+NamedPipe::NamedPipe(const std::wstring& name, DWORD mode, std::optional<SecurityAttributes> sa)
 {
     std::wstring fullName = L"\\\\.\\pipe\\" + name;
-
     m_Handle = CreateNamedPipe(
         fullName.c_str(),
         mode,
         PIPE_TYPE_BYTE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
-        INPUT_BUFFER_SIZE, OUTPUT_BUFFER_SIZE, 0, NULL
+        INPUT_BUFFER_SIZE, OUTPUT_BUFFER_SIZE, 0,
+        sa.has_value() ? &sa->getModifiable() : NULL
     );
 
     if (m_Handle == INVALID_HANDLE_VALUE)
@@ -29,13 +29,12 @@ NamedPipe::~NamedPipe()
 void NamedPipe::listen()
 {
     expect(m_Handle != NULL);
-    expect(m_ErrorCode == ERROR_SUCCESS);
 
     if (ConnectNamedPipe(m_Handle, NULL) == 0)
         throw Win32Exception(L"ConnectNamedPipe");
 }
 
-NamedPipe NamedPipe::connect(const std::wstring& name)
+NamedPipe NamedPipe::connect(const std::wstring& name, DWORD mode)
 {
     std::wstring fullName = L"\\\\.\\pipe\\" + name;
 
@@ -49,7 +48,7 @@ NamedPipe NamedPipe::connect(const std::wstring& name)
     
     HANDLE hPipe = CreateFile(
         fullName.c_str(),
-        GENERIC_READ | GENERIC_WRITE,
+        mode,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL,
         OPEN_EXISTING,

@@ -18,7 +18,7 @@ public:
             Logger& logger, size_t index, std::stack<size_t>& unusedClientsQueue, 
             Mutex& unusedClientsStackMutex, Garland& garland)
             :
-            pipe(pipeName),
+            pipe(pipeName, PIPE_ACCESS_OUTBOUND),
             logger(logger),
             thread(proc, this),
             index(index),

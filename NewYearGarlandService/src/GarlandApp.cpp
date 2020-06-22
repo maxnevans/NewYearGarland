@@ -156,7 +156,7 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
         }
 
         client->thread.onException([&client](const Exception& ex) {
-            client->logger.error(THREAD_MSG(client->thread, L"Client thread exception happend." + ex.what()));
+            client->logger.error(THREAD_MSG(client->thread, L"Client thread exception happend. " + ex.what()));
         });
 
         client->thread.start();
@@ -169,7 +169,7 @@ void GarlandApp::createServer(Event& stopEvent)
 {
     auto& server = m_Servers.emplace_back(new Server(serverThreadProc, m_Logger, m_Clients, m_UnusedClientsStack, m_Garland));
     server->thread.onException([this, &server](const Exception& ex) {
-        m_Logger.error(THREAD_MSG(server->thread, L"Server thread exception happend." + ex.what()));
+        m_Logger.error(THREAD_MSG(server->thread, L"Server thread exception happend. " + ex.what()));
     });
     server->thread.start();
 }
