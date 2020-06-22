@@ -2,14 +2,13 @@
 #include "pch.h"
 #include "Win32Exception.h"
 #include "SystemObject.h"
-#include "SecurityAttributes.h"
 
 class NamedPipe
     :
     public SystemObject
 {
 public:
-    NamedPipe(const std::wstring& name, DWORD mode = PIPE_ACCESS_DUPLEX, std::optional<SecurityAttributes> sa = std::nullopt);
+    NamedPipe(const std::wstring& name, DWORD mode = PIPE_ACCESS_DUPLEX);
     virtual ~NamedPipe();
     NamedPipe(const NamedPipe&) = delete;
     NamedPipe& operator=(const NamedPipe&) = delete;

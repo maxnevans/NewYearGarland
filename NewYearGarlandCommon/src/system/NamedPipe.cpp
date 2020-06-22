@@ -2,7 +2,7 @@
 #include "NamedPipe.h"
 #include "Win32Exception.h"
 
-NamedPipe::NamedPipe(const std::wstring& name, DWORD mode, std::optional<SecurityAttributes> sa)
+NamedPipe::NamedPipe(const std::wstring& name, DWORD mode)
 {
     std::wstring fullName = L"\\\\.\\pipe\\" + name;
     m_Handle = CreateNamedPipe(
@@ -11,7 +11,7 @@ NamedPipe::NamedPipe(const std::wstring& name, DWORD mode, std::optional<Securit
         PIPE_TYPE_BYTE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
         INPUT_BUFFER_SIZE, OUTPUT_BUFFER_SIZE, 0,
-        sa.has_value() ? &sa->getModifiable() : NULL
+        NULL
     );
 
     if (m_Handle == INVALID_HANDLE_VALUE)
