@@ -100,7 +100,8 @@ int wmain(int argc, wchar_t* argv[])
             return 0;
         }
 
-        GarlandService::start();
+        auto logger = Logger(GarlandService::getLogsPath(), true);
+        GarlandService::start(logger);
     }
     catch (Win32Exception& ex)
     {
