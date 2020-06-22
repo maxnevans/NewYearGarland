@@ -86,7 +86,7 @@ private:
      * \param lb[in] lightbulb to perform logic on
      * \return if exception in lighbulb user registered logic happend
      */
-    bool p_PerformLightbulbLogic(std::shared_ptr<Lightbulb>& lb) const noexcept;
+    bool p_PerformLightbulbLogic(Event& stopEvent, std::shared_ptr<Lightbulb>& lb) const noexcept;
 
     /**
      * Checks whether all lightbulbs unregistered and stopped. Called inside monitor 
