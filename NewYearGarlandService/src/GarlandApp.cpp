@@ -54,16 +54,27 @@ void GarlandApp::clientThreadProc(Event& stopEvent, Client* client)
 
     auto onLightOn = [&logger, &pipe, &garland, &thread]()
     {
-        {
-            ServerMessage msg;
-            msg.type = ServerMessageType::LIGHT;
-            msg.light.isPowered = true;
+        ServerMessage msg;
+        msg.type = ServerMessageType::LIGHT;
+        msg.light.isPowered = true;
 
-            logger.info(THREAD_MSG(thread, L"Sending `onLightOn` message to client."));
+        try
+        {
             pipe.write(msg);
-            logger.info(THREAD_MSG(thread, L"Message sent."));
+            return true;
         }
-        
+        catch (const Win32Exception& ex)
+        {
+            if (ex.getCode() == ERROR_NO_DATA)
+            {
+                logger.info(L"Pipe has been closed from client side. Thread that handle this client: " + std::to_wstring(thread.getId()));
+                return false;
+            }
+
+            throw;
+        }
+
+        return false;
     };
 
     auto onLightOff = [&logger, &pipe, &thread]()
@@ -72,9 +83,23 @@ void GarlandApp::clientThreadProc(Event& stopEvent, Client* client)
         msg.type = ServerMessageType::LIGHT;
         msg.light.isPowered = false;
 
-        logger.info(THREAD_MSG(thread, L"Sending `onLightOff` message to client."));
-        pipe.write(msg);
-        logger.info(THREAD_MSG(thread, L"Message sent."));
+        try
+        {
+            pipe.write(msg);
+            return true;
+        }
+        catch (const Win32Exception& ex)
+        {
+            if (ex.getCode() == ERROR_NO_DATA)
+            {
+                logger.info(L"Pipe has been closed from client side. Thread that handle this client: " + std::to_wstring(thread.getId()));
+                return false;
+            }
+
+            throw;
+        }
+
+        return false;
     };
 
     auto onColor = [&logger, &pipe, &garland, &thread](const Garland::Color& color)
@@ -83,9 +108,23 @@ void GarlandApp::clientThreadProc(Event& stopEvent, Client* client)
         msg.type = ServerMessageType::COLOR;
         msg.color = { color.r, color.g, color.b };
 
-        logger.info(THREAD_MSG(thread, L"Sending `onColor` message to client."));
-        pipe.write(msg);
-        logger.info(THREAD_MSG(thread, L"Message sent."));
+        try
+        {
+            pipe.write(msg);
+            return true;
+        }
+        catch (const Win32Exception& ex)
+        {
+            if (ex.getCode() == ERROR_NO_DATA)
+            {
+                logger.info(L"Pipe has been closed from client side. Thread that handle this client: " + std::to_wstring(thread.getId()));
+                return false;
+            }
+
+            throw;
+        }
+
+        return false;
     };
 
     try
@@ -117,27 +156,37 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
 
     logger.info(THREAD_MSG(thread, L"Server started."));
 
-    while (!stopEvent.check())
+    try
     {
-        auto client = std::make_shared<Client>(clientThreadProc, PIPE_NAME, 
-            logger, 0, server->unusedClientsStack, server->unusedClientsStackMutex, server->garland);
-
-        logger.info(THREAD_MSG(thread, L"Listenining for client to connect..."));
-        client->pipe.listen();
-        logger.info(THREAD_MSG(thread, L"Client connected."));
-
-        if (!server->unusedClientsStack.empty())
+        while (!stopEvent.check())
         {
-            logger.info(THREAD_MSG(thread, L"Client takes unused index in clients vector."));
-            MutexGuard m(server->unusedClientsStackMutex);
+            auto client = std::make_shared<Client>(clientThreadProc, PIPE_NAME,
+                logger, 0, server->unusedClientsStack, server->unusedClientsStackMutex, server->garland);
+
+            logger.info(THREAD_MSG(thread, L"Listenining for client to connect..."));
+            client->pipe.listen();
+            logger.info(THREAD_MSG(thread, L"Client connected."));
+
             if (!server->unusedClientsStack.empty())
             {
+                logger.info(THREAD_MSG(thread, L"Client takes unused index in clients vector."));
+                MutexGuard m(server->unusedClientsStackMutex);
+                if (!server->unusedClientsStack.empty())
                 {
-                    MutexGuard m(clientsMutex);
-                    client->index = server->unusedClientsStack.top();
-                    clients[client->index] = client;
+                    {
+                        MutexGuard m(clientsMutex);
+                        client->index = server->unusedClientsStack.top();
+                        clients[client->index] = client;
+                    }
+                    server->unusedClientsStack.pop();
                 }
-                server->unusedClientsStack.pop();
+                else
+                {
+                    logger.info(THREAD_MSG(thread, L"Client takes new index in clients vector."));
+                    MutexGuard m(clientsMutex);
+                    client->index = clients.size();
+                    clients.push_back(client);
+                }
             }
             else
             {
@@ -146,21 +195,28 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
                 client->index = clients.size();
                 clients.push_back(client);
             }
-        }
-        else
-        {
-            logger.info(THREAD_MSG(thread, L"Client takes new index in clients vector."));
-            MutexGuard m(clientsMutex);
-            client->index = clients.size();
-            clients.push_back(client);
-        }
 
-        client->thread.onException([&client](const Exception& ex) {
-            client->logger.error(THREAD_MSG(client->thread, L"Client thread exception happend. " + ex.what()));
-        });
+            client->thread.onException([&client](const Exception& ex) {
+                // To be awared if any exception thrown through but it should never go outside thread
+                client->logger.error(THREAD_MSG(client->thread, L"Client thread exception happend. " + ex.what()));
+            });
 
-        client->thread.start();
+            client->thread.start();
+        }
     }
+    catch (const Win32Exception& ex)
+    {
+        logger.warn(THREAD_MSG(thread, L"Server catched Win32Exception: " + ex.what()));
+    }
+    catch (const Exception& ex)
+    {
+        logger.warn(THREAD_MSG(thread, L"Server catched an exception: " + ex.what()));
+    }
+    catch (...)
+    {
+        logger.error(THREAD_MSG(thread, L"Server catched an uknown exception."));
+    }
+
 
     logger.info(THREAD_MSG(thread, L"Server stopped."));
 }
@@ -169,6 +225,7 @@ void GarlandApp::createServer(Event& stopEvent)
 {
     auto& server = m_Servers.emplace_back(new Server(serverThreadProc, m_Logger, m_Clients, m_UnusedClientsStack, m_Garland));
     server->thread.onException([this, &server](const Exception& ex) {
+        // To be awared if any exception thrown through but it should never go outside thread
         m_Logger.error(THREAD_MSG(server->thread, L"Server thread exception happend. " + ex.what()));
     });
     server->thread.start();
@@ -176,6 +233,8 @@ void GarlandApp::createServer(Event& stopEvent)
 
 bool GarlandApp::stopServers(DWORD waitMilliseconds)
 {
+    p_IndicateStopping();
+
     auto savePoint = GetTickCount64();
 
     // Stopping clients
@@ -195,4 +254,9 @@ bool GarlandApp::stopServers(DWORD waitMilliseconds)
         return false;
 
     return true;
+}
+
+void GarlandApp::p_IndicateStopping()
+{
+    InterlockedIncrement(&m_IsStopping);
 }

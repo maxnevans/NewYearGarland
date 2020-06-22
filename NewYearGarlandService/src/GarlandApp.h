@@ -105,6 +105,8 @@ private:
         return true;
     }
 
+    void p_IndicateStopping();
+
 private:
     static constexpr const wchar_t* PIPE_NAME = L"NewYearGarlandService";
     Logger& m_Logger;
@@ -112,4 +114,5 @@ private:
     std::vector<std::shared_ptr<Client>> m_Clients;
     std::vector<std::shared_ptr<Server>> m_Servers;
     std::stack<size_t> m_UnusedClientsStack;
+    volatile unsigned long m_IsStopping = false;
 };

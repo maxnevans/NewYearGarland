@@ -90,11 +90,11 @@ void Garland::start(Event& stopEvent)
 
                     m_Logger.debug(L"Garland::start: performing lightbulb logic.");
 
-                    // if fails than we got an exception: wake all lightbulbs and let them check
+                    // if fails than lighbulb should be notified to check state: wake all lightbulbs and let them check
                     if (!p_PerformLightbulbLogic(stopEvent, lb))
                     {
                         shouldNotifyAll = true;
-                        m_Logger.warn(L"Garland::start: lightbulb logic thrown an exception.");
+                        m_Logger.warn(L"Garland::start: lightbulb logic needs to notify all lightbulbs.");
                     }
 
                     m_Monitor.enter();
@@ -235,20 +235,35 @@ bool Garland::p_PerformLightbulbLogic(Event& stopEvent, std::shared_ptr<Lightbul
 {
     try
     {
-        lb->onColor(p_GetColor());
-        lb->onLightOn();
+        if (!lb->onColor(p_GetColor()))
+        {
+            lb->shouldStop = true;
+            return false;
+        }
+
+        if (!lb->onLightOn())
+        {
+            lb->shouldStop = true;
+            return false;
+        }
 
         Waiter w(true, 1000);
         if (w.wait(stopEvent))
             return true;
 
-        lb->onLightOff();
+        if (!lb->onLightOff())
+        {
+            lb->shouldStop = true;
+            return false;
+        }
+
         return true;
     }
     catch (const Exception& e)
     {
         lb->ex = e;
         lb->shouldStop = true;
+        return false;
     }
 
     return false;

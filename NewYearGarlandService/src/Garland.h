@@ -13,9 +13,18 @@ public:
         byte g;
         byte b;
     };
-    using OnLightOnFunc = std::function<void()>;
-    using OnLightOffFunc = std::function<void()>;
-    using OnColorFunc = std::function<void(const Color&)>;
+    /**
+    * \return Should return false if client disconnected.
+    */
+    using OnLightOnFunc = std::function<bool()>;
+    /**
+    * \return Should return false if client disconnected.
+    */
+    using OnLightOffFunc = std::function<bool()>;
+    /**
+    * \return Should return false if client disconnected.
+    */
+    using OnColorFunc = std::function<bool(const Color&)>;
 
     using LightbulbHandler = unsigned int;
 
@@ -84,7 +93,7 @@ private:
      * Executes single lightbulb logic.Modifies `Lightbulb`.
      * 
      * \param lb[in] lightbulb to perform logic on
-     * \return if exception in lighbulb user registered logic happend
+     * \return if lightbulb should be notified returns false
      */
     bool p_PerformLightbulbLogic(Event& stopEvent, std::shared_ptr<Lightbulb>& lb) const noexcept;
 
