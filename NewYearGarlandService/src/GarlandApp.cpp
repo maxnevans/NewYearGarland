@@ -23,17 +23,25 @@ void GarlandApp::main(Event& stopEvent, ReportStoppingFunc reportStopping)
 
         m_Garland.start(stopEvent);
 
-        const DWORD stoppingTimout = 3000;
-        reportStopping(stoppingTimout);
+        // Give some time to stop servers and clients
+        const DWORD serversStoppingTime = 3000;
+        reportStopping(serversStoppingTime);
 
         m_Logger.info(L"Stopping servers.");
-        if (!stopServers(stoppingTimout))
-            m_Logger.warn(L"Failed to stop servers in " + std::to_wstring(stoppingTimout));
+        if (!stopServers(serversStoppingTime))
+            m_Logger.warn(L"Failed to stop servers in " + std::to_wstring(serversStoppingTime));
+        else
+            m_Logger.info(L"Servers successfully stopped.");
+
+        // Give some time to stop garland
+        const DWORD garlandStoppingTime = 3000;
+        reportStopping(garlandStoppingTime);
 
         m_Logger.info(L"Stopping garland.");
-        m_Garland.stop();
-
-        m_Logger.info(L"Servers successfully stopped.");
+        if (!m_Garland.stop(garlandStoppingTime))
+            m_Logger.warn(L"Failed to stop garland in " + std::to_wstring(garlandStoppingTime));
+        else
+            m_Logger.info(L"Garland successfully stopped.");
     }
     catch (Win32Exception& ex)
     {
@@ -206,11 +214,17 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
     }
     catch (const Win32Exception& ex)
     {
-        logger.warn(THREAD_MSG(thread, L"Server catched Win32Exception: " + ex.what()));
+        if (ex.getCode() == ERROR_OPERATION_ABORTED && stopEvent.check())
+        {
+            logger.info(THREAD_MSG(thread, L"Stopping server thread."));
+            return;
+        }
+
+        logger.error(THREAD_MSG(thread, L"Server catched Win32Exception: " + ex.what()));
     }
     catch (const Exception& ex)
     {
-        logger.warn(THREAD_MSG(thread, L"Server catched an exception: " + ex.what()));
+        logger.error(THREAD_MSG(thread, L"Server catched an exception: " + ex.what()));
     }
     catch (...)
     {
@@ -218,7 +232,7 @@ void GarlandApp::serverThreadProc(Event& stopEvent, Server* server)
     }
 
 
-    logger.info(THREAD_MSG(thread, L"Server stopped."));
+    logger.info(THREAD_MSG(thread, L"Server thread stopped."));
 }
 
 void GarlandApp::createServer(Event& stopEvent)
@@ -233,8 +247,6 @@ void GarlandApp::createServer(Event& stopEvent)
 
 bool GarlandApp::stopServers(DWORD waitMilliseconds)
 {
-    p_IndicateStopping();
-
     auto savePoint = GetTickCount64();
 
     // Stopping clients
@@ -254,9 +266,4 @@ bool GarlandApp::stopServers(DWORD waitMilliseconds)
         return false;
 
     return true;
-}
-
-void GarlandApp::p_IndicateStopping()
-{
-    InterlockedIncrement(&m_IsStopping);
 }

@@ -53,7 +53,7 @@ public:
     Garland& operator=(const Garland&) = delete;
     virtual ~Garland();
     void start(Event& stopEvent);
-    void stop();
+    bool stop(DWORD waitMilliseconds = INFINITE);
 
     /**
      * Used by lightbulbs to register it's callback functions.

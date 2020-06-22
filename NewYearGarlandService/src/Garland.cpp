@@ -124,15 +124,31 @@ void Garland::start(Event& stopEvent)
     m_Logger.debug(L"Garland::start: end.");
 }
 
-void Garland::stop()
+bool Garland::stop(DWORD waitMilliseconds)
 {
+    auto savePoint = GetTickCount64();
+    long long ticksLeft = waitMilliseconds;
+
     m_Monitor.enter();
     m_ShouldStopAll = true;
     m_Monitor.wake(m_LightningControlCv, true);
+
     // Wait until all lightbulbs will stop
-    while (!p_CheckAllStopped())
-        m_Monitor.sleep(m_StoppingControlCv);
+    while (!p_CheckAllStopped() && ticksLeft > 0)
+    {
+        m_Monitor.sleep(m_StoppingControlCv, static_cast<DWORD>(ticksLeft));
+        ticksLeft = waitMilliseconds - static_cast<DWORD>(GetTickCount64() - savePoint);
+    }
+
+    if (ticksLeft <= 0 && !p_CheckAllStopped())
+    {
+        m_Monitor.leave();
+        return false;
+    }
+
     m_Monitor.leave();
+
+    return true;
 }
 
 Garland::LightbulbHandler Garland::registerLightbulb(Event& stopEvent, OnColorFunc onColor,
