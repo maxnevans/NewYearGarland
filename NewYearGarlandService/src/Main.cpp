@@ -125,8 +125,9 @@ int wmain(int argc, wchar_t* argv[])
         {
             // If started from console install and start service
             installService();
-            startService(argc, argv);
+            //startService(argc, argv);
             std::wcout << L"You can now close console safely.\n";
+            system("pause");
         }
 
         logger.stop();

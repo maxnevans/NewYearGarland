@@ -94,7 +94,7 @@ void Garland::start(Event& stopEvent)
                     if (!p_PerformLightbulbLogic(stopEvent, lb))
                     {
                         shouldNotifyAll = true;
-                        m_Logger.warn(L"Garland::start: lightbulb logic needs to notify all lightbulbs.");
+                        m_Logger.info(L"Garland::start: lightbulb logic needs to notify all lightbulbs.");
                     }
 
                     m_Monitor.enter();
