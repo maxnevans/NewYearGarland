@@ -22,12 +22,15 @@ Logger::Logger(const std::wstring& pathToLogs, bool shouldThrow, bool enableFlus
 
 Logger::~Logger()
 {
-    expect(m_FlusherThread != NULL);
-
-    if (m_FlusherThread != NULL)
+    if (m_EnableFlusher)
     {
-        TerminateThread(m_FlusherThread, NULL);
-        CloseHandle(m_FlusherThread);
+        expect(m_FlusherThread != NULL);
+
+        if (m_FlusherThread != NULL)
+        {
+            TerminateThread(m_FlusherThread, NULL);
+            CloseHandle(m_FlusherThread);
+        }
     }
 
     if (m_ShouldCloseFile && m_LogFileHandle != NULL)

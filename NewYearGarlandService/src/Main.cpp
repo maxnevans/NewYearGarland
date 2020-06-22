@@ -74,10 +74,8 @@ int wmain(int argc, wchar_t* argv[])
 
         if (lstrcmpi(argv[1], L"--mode") == 0 && lstrcmpi(argv[2], L"console") == 0)
         {
-            if (!SetConsoleCtrlHandler(consoleHandler, TRUE)) {
-                printf("\nERROR: Could not set control handler");
-                return 1;
-            }
+            if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
+                throw Win32Exception(L"SetConsoleCtrlHandler");
 
             std::wcout << L"Starting service from console...\n";
 
