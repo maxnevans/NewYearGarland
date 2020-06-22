@@ -1,9 +1,10 @@
 #pragma once
 #include "SystemObject.h"
+#include "WaitableSystemObject.h"
 
 class Mutex
     :
-    public SystemObject
+    public WaitableSystemObject
 {
 public:
     Mutex();

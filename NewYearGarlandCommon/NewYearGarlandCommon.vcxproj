@@ -183,6 +183,8 @@
     <ClInclude Include="src\system\StdSupport.h" />
     <ClInclude Include="src\system\SystemObject.h" />
     <ClInclude Include="src\system\Thread.h" />
+    <ClInclude Include="src\system\WaitableSystemObject.h" />
+    <ClInclude Include="src\system\Waiter.h" />
     <ClInclude Include="src\system\Win32Exception.h" />
   </ItemGroup>
   <ItemGroup>
@@ -208,6 +210,7 @@
     <ClCompile Include="src\system\Service.cpp" />
     <ClCompile Include="src\system\ServiceControlManager.cpp" />
     <ClCompile Include="src\system\SystemObject.cpp" />
+    <ClCompile Include="src\system\Waiter.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

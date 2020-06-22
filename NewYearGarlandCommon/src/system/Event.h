@@ -1,11 +1,11 @@
 #pragma once
 
 #include "pch.h"
-#include "SystemObject.h"
+#include "WaitableSystemObject.h"
 
 class Event
     :
-    public SystemObject
+    public WaitableSystemObject
 {
 public:
     Event(bool isManuallyReset = true, bool isSignaled = false, const wchar_t* name = nullptr);

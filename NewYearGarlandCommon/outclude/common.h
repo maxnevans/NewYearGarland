@@ -15,3 +15,4 @@
 #include "../src/system/CriticalSectionGuard.h"
 #include "../src/system/Monitor.h"
 #include "../src/system/Barrier.h"
+#include "../src/system/Waiter.h"

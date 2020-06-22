@@ -1,14 +1,14 @@
 #pragma once
 #include "pch.h"
-#include "SystemObject.h"
 #include "../Exception.h"
 #include "Win32Exception.h"
 #include "Event.h"
+#include "WaitableSystemObject.h"
 
 template<typename T>
 class Thread
     :
-    public SystemObject
+    public WaitableSystemObject
 {
 public:
     using ThreadProc = void (*)(Event& stopEvent, T arg);

@@ -11,6 +11,8 @@
 #include <memory>
 #include <functional>
 #include <utility>
+#include <exception>
+#include <algorithm>
 
 // For a better meaning
 #define expect(x) assert(x)
