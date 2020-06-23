@@ -176,6 +176,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\GarlandApp.cpp" />
+    <ClCompile Include="src\GarlandWindow.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -185,6 +187,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\GarlandApp.h" />
+    <ClInclude Include="src\GarlandWindow.h" />
+    <ClInclude Include="src\GarlandWindowMessage.h" />
+    <ClInclude Include="src\Geometry.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\UnclassifiedException.h" />
   </ItemGroup>

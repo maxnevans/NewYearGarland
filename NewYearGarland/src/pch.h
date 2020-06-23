@@ -4,6 +4,8 @@
 #include <vector>
 #include <string_view>
 #include <sstream>
+#include <random>
+#include <cmath>
 
 // Windows Header Files
 #include <windows.h>

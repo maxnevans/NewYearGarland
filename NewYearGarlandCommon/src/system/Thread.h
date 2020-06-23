@@ -11,7 +11,7 @@ class Thread
     public WaitableSystemObject
 {
 public:
-    using ThreadProc = void (*)(Event& stopEvent, T arg);
+    using ThreadProc = void(*)(Event& stopEvent, T arg);
     using OnExceptionCallback = std::function<void(const Exception&)>;
 public:
     Thread(ThreadProc proc, T arg)
@@ -63,14 +63,19 @@ public:
     {
         return m_ThreadId;
     }
+    bool didStop() const
+    {
+        return static_cast<bool>(m_DidStop);
+    }
 
 protected:
     static DWORD WINAPI threadProc(LPVOID arg)
     {
-        auto thread = reinterpret_cast<Thread<T>*>(arg);
+        auto thread = reinterpret_cast<Thread*>(arg);
         try
         {
             thread->m_Proc(thread->m_StopEvent, thread->m_ProcArgument);
+            InterlockedIncrement(&thread->m_DidStop);
             return THREAD_CODE_OK;
         }
         catch (Exception& e)
@@ -79,6 +84,7 @@ protected:
             if (thread->m_ExceptionCallback)
                 thread->m_ExceptionCallback(e);
         }
+        InterlockedIncrement(&thread->m_DidStop);
         return THREAD_CODE_EXCEPTION;
     }
 
@@ -94,4 +100,5 @@ private:
     Event m_StopEvent                                       = Event(true, false);
     Exception m_Exception                                   = {};
     OnExceptionCallback m_ExceptionCallback                 = nullptr;
+    volatile unsigned long m_DidStop                        = false;
 };
