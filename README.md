@@ -13,9 +13,19 @@
 - Launch `cmd.exe` with admin rights.
 - Naviate to `${SolutionDir}bin` folder.
 - Run `NewYearGarlandService.exe install`.
-- Press `Ctrl + R` and type `services.msc` to open SCM.
+- Press `Win + R` and type `services.msc` to open SCM.
 - Press `N` to quickly navigate to `New Year Garland` service.
 - Right click on it and choose `start`.
 - Open `${SolutionDir}bin` folder in file explorer. 
 - Run `NewYearGarland.exe` as many instances as you want.
+- Relax.
+
+## Delete instructions:
+
+- Press `Win + R` and type `services.msc` to open SCM.
+- Press `N` to quickly navigate to `New Year Garland` service.
+- Right click on it and choose `Stop`.
+- Launch `cmd.exe` with admin rights.
+- Naviate to `${SolutionDir}bin` folder.
+- Run `NewYearGarlandService.exe delete`.
 - Relax.
